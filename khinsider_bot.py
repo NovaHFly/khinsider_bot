@@ -1,5 +1,6 @@
 import logging
 import os
+from concurrent.futures import as_completed
 
 import khinsider
 from telegram import Update
@@ -27,7 +28,15 @@ async def handle_track_url(
 ) -> None:
     message = update.message
 
-    await message.reply_text('This is track url (stub...)')
+    try:
+        _, track_path = khinsider.fetch_and_download_track(message.text)
+    except khinsider.KhinsiderError:
+        await message.reply_text("Couldn't get track :-(")
+        return
+
+    await message.reply_audio(track_path)
+
+    track_path.unlink(missing_ok=True)
 
 
 async def handle_album_url(
@@ -51,6 +60,15 @@ async def handle_album_url(
             f'Track count: {album_data.track_count}'
         ),
     )
+
+    for task in as_completed(khinsider.download_tracks(message.text)):
+        if task.exception():
+            logger.error(task.exception())
+            continue
+
+        track_path = task.result()[1]
+        await message.reply_audio(track_path)
+        track_path.unlink(missing_ok=True)
 
 
 @unset_reaction_on_done
