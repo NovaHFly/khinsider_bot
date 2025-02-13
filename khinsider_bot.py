@@ -29,14 +29,20 @@ async def handle_track_url(
     message = update.message
 
     try:
-        _, track_path = khinsider.fetch_and_download_track(message.text)
+        track_path = khinsider.fetch_and_download_track(message.text)
     except khinsider.KhinsiderError:
         await message.reply_text("Couldn't get track :-(")
         return
 
-    await message.reply_audio(track_path)
+    while True:
+        try:
+            await message.reply_audio(track_path)
+        except TimedOut:
+            continue
+        break
 
     track_path.unlink(missing_ok=True)
+    track_path.parent.rmdir()
 
 
 async def handle_album_url(
