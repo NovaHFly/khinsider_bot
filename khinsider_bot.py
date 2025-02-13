@@ -1,10 +1,10 @@
 import logging
 import os
-from concurrent.futures import as_completed
 
 import khinsider
 from telegram import Update
 from telegram.constants import ReactionEmoji
+from telegram.error import TimedOut
 from telegram.ext import Application, ContextTypes, filters, MessageHandler
 
 logger = logging.getLogger('khinsider_bot')
@@ -61,14 +61,21 @@ async def handle_album_url(
         ),
     )
 
-    for task in as_completed(khinsider.download_tracks(message.text)):
-        if task.exception():
-            logger.error(task.exception())
+    for download in khinsider.download_from_urls(message.text.splitlines()[0]):
+        if not download:
             continue
+        while True:
+            try:
+                await message.reply_audio(
+                    download,
+                    thumbnail=album_data.thumbnail_urls[0],
+                )
+            except TimedOut:
+                continue
+            break
+        download.unlink(missing_ok=True)
 
-        track_path = task.result()[1]
-        await message.reply_audio(track_path)
-        track_path.unlink(missing_ok=True)
+    download.parent.rmdir()
 
 
 @unset_reaction_on_done
