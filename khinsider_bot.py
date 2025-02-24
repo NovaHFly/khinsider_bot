@@ -68,61 +68,35 @@ async def safe_reply_audio(
 
 
 async def handle_track_url(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
+    message: Message,
+    download_dir: Path,
 ) -> None:
-    message = update.message
-
-    while (
-        download_id := random.randint(1, 999999)
-    ) and download_id in context.bot_data['downloads']:
-        pass
-
-    download_path = khinsider.DOWNLOADS_PATH / str(download_id)
-    context.bot_data['downloads']['download_id'] = download_path
-
     try:
         (track_path,) = khinsider.download(
             message.text.splitlines()[0],
-            download_path,
+            download_dir,
         )
         await safe_reply_audio(message, track_path)
     except Exception:
         await message.reply_text("Couldn't get track :-(")
         raise
-    finally:
-        shutil.rmtree(download_path, ignore_errors=True)
-        context.bot_data['downloads'].pop('download_id')
 
 
 async def handle_album_url(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
+    message: Message,
+    download_dir: Path,
 ) -> None:
-    message = update.message
-
-    while (
-        download_id := random.randint(1, 999999)
-    ) and download_id in context.bot_data['downloads']:
-        pass
-
-    download_path = khinsider.DOWNLOADS_PATH / str(download_id)
-    context.bot_data['downloads']['download_id'] = download_path
-
     try:
         album_data = khinsider.get_album_data(message.text)
         await reply_with_album_details(message, album_data)
         for track_path in khinsider.download(
             message.text.splitlines()[0],
-            download_path,
+            download_dir,
         ):
             await safe_reply_audio(message, track_path)
-    except khinsider.KhinsiderError:
+    except Exception:
         await message.reply_text("Couldn't get album data :-(")
         raise
-    finally:
-        shutil.rmtree(download_path, ignore_errors=True)
-        context.bot_data['downloads'].pop('download_id')
 
 
 @set_reaction_on_done(success_reaction=ReactionEmoji.THUMBS_UP)
@@ -134,11 +108,24 @@ async def handle_khinsider_url(
 
     await message.set_reaction(ReactionEmoji.EYES)
 
-    if context.match[2]:
-        await handle_track_url(update, context)
-        return
+    while (
+        download_id := random.randint(1, 999999)
+    ) and download_id in context.bot_data['downloads']:
+        pass
 
-    await handle_album_url(update, context)
+    download_dir = khinsider.DOWNLOADS_PATH / str(download_id)
+    context.bot_data['downloads'][download_id] = download_dir
+
+    try:
+        if context.match[2]:
+            await handle_track_url(message, download_dir)
+            return
+
+        await handle_album_url(message, download_dir)
+
+    finally:
+        shutil.rmtree(download_dir, ignore_errors=True)
+        context.bot_data['downloads'].pop(download_id)
 
 
 def main() -> None:
