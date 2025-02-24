@@ -2,9 +2,10 @@ import logging
 import os
 import random
 import shutil
+from pathlib import Path
 
 import khinsider
-from telegram import Update
+from telegram import Message, Update
 from telegram.constants import ReactionEmoji
 from telegram.error import TimedOut
 from telegram.ext import Application, ContextTypes, filters, MessageHandler
@@ -39,6 +40,18 @@ def set_reaction_on_done(
     return decorator
 
 
+async def safe_reply_audio(
+    message: Message,
+    audio_path: Path,
+) -> None:
+    while True:
+        try:
+            await message.reply_audio(audio_path)
+        except TimedOut:
+            continue
+        break
+
+
 async def handle_track_url(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
@@ -55,16 +68,10 @@ async def handle_track_url(
 
     try:
         (track_path,) = await khinsider.download(message.text, download_path)
+        await safe_reply_audio(message, track_path)
     except Exception:
         await message.reply_text("Couldn't get track :-(")
         raise
-    else:
-        while True:
-            try:
-                await message.reply_audio(track_path)
-            except TimedOut:
-                continue
-            break
     finally:
         shutil.rmtree(download_path, ignore_errors=True)
         context.bot_data['downloads'].pop('download_id')
