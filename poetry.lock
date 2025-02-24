@@ -143,7 +143,7 @@ tenacity = "^9.0.0"
 type = "git"
 url = "https://github.com/NovaHFly/khinsider_downloader"
 reference = "HEAD"
-resolved_reference = "7761987595d06aa4924a9572e6fac59aacf71487"
+resolved_reference = "869c6c5191ae1af53a053d2e1bded37e1a9bcd3b"
 
 [[package]]
 name = "lxml"
