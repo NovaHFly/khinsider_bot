@@ -10,18 +10,34 @@ from telegram.ext import Application, ContextTypes, filters, MessageHandler
 logger = logging.getLogger('khinsider_bot')
 
 
-def unset_reaction_on_done(handler):
-    async def handler_wrapper(
-        update: Update,
-        context: ContextTypes.DEFAULT_TYPE,
-    ):
-        result = await handler(update, context)
-        await update.message.set_reaction()
-        return result
+def set_reaction_on_done(
+    handler=None,
+    *,
+    success_reaction: ReactionEmoji | None = None,
+    error_reaction: ReactionEmoji | None = ReactionEmoji.SEE_NO_EVIL_MONKEY,
+):
+    def decorator(handler):
+        async def handler_wrapper(
+            update: Update,
+            context: ContextTypes.DEFAULT_TYPE,
+        ):
+            try:
+                result = await handler(update, context)
+                await update.message.set_reaction(success_reaction)
+                return result
+            except Exception:
+                await update.message.set_reaction(error_reaction)
+                raise
 
-    return handler_wrapper
+        return handler_wrapper
+
+    if handler:
+        return decorator(handler)
+
+    return decorator
 
 
+@set_reaction_on_done(success_reaction=ReactionEmoji.THUMBS_UP)
 async def handle_track_url(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
@@ -84,7 +100,7 @@ async def handle_album_url(
     download.parent.rmdir()
 
 
-@unset_reaction_on_done
+@set_reaction_on_done(success_reaction=ReactionEmoji.THUMBS_UP)
 async def handle_khinsider_url(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
