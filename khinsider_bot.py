@@ -40,6 +40,21 @@ def set_reaction_on_done(
     return decorator
 
 
+async def reply_with_album_details(
+    message: Message,
+    album: khinsider.Album,
+) -> None:
+    await message.reply_photo(
+        album.thumbnail_urls[0],
+        caption=(
+            f'{album.name}\n'
+            f'Year: {album.year}\n'
+            f'Type: {album.type}\n'
+            f'Track count: {album.track_count}'
+        ),
+    )
+
+
 async def safe_reply_audio(
     message: Message,
     audio_path: Path,
@@ -67,7 +82,10 @@ async def handle_track_url(
     context.bot_data['downloads']['download_id'] = download_path
 
     try:
-        (track_path,) = await khinsider.download(message.text, download_path)
+        (track_path,) = khinsider.download(
+            message.text.splitlines()[0],
+            download_path,
+        )
         await safe_reply_audio(message, track_path)
     except Exception:
         await message.reply_text("Couldn't get track :-(")
@@ -83,37 +101,28 @@ async def handle_album_url(
 ) -> None:
     message = update.message
 
+    while (
+        download_id := random.randint(1, 999999)
+    ) and download_id in context.bot_data['downloads']:
+        pass
+
+    download_path = khinsider.DOWNLOADS_PATH / str(download_id)
+    context.bot_data['downloads']['download_id'] = download_path
+
     try:
         album_data = khinsider.get_album_data(message.text)
+        await reply_with_album_details(message, album_data)
+        for track_path in khinsider.download(
+            message.text.splitlines()[0],
+            download_path,
+        ):
+            await safe_reply_audio(message, track_path)
     except khinsider.KhinsiderError:
         await message.reply_text("Couldn't get album data :-(")
-        return
-
-    await message.reply_photo(
-        album_data.thumbnail_urls[0],
-        caption=(
-            f'{album_data.name}\n'
-            f'Year: {album_data.year}\n'
-            f'Type: {album_data.type}\n'
-            f'Track count: {album_data.track_count}'
-        ),
-    )
-
-    for download in khinsider.download_from_urls(message.text.splitlines()[0]):
-        if not download:
-            continue
-        while True:
-            try:
-                await message.reply_audio(
-                    download,
-                    thumbnail=album_data.thumbnail_urls[0],
-                )
-            except TimedOut:
-                continue
-            break
-        download.unlink(missing_ok=True)
-
-    download.parent.rmdir()
+        raise
+    finally:
+        shutil.rmtree(download_path, ignore_errors=True)
+        context.bot_data['downloads'].pop('download_id')
 
 
 @set_reaction_on_done(success_reaction=ReactionEmoji.THUMBS_UP)
