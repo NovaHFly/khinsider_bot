@@ -1,5 +1,7 @@
 import logging
 import os
+import random
+import shutil
 
 import khinsider
 from telegram import Update
@@ -37,28 +39,35 @@ def set_reaction_on_done(
     return decorator
 
 
-@set_reaction_on_done(success_reaction=ReactionEmoji.THUMBS_UP)
 async def handle_track_url(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     message = update.message
 
+    while (
+        download_id := random.randint(1, 999999)
+    ) and download_id in context.bot_data['downloads']:
+        pass
+
+    download_path = khinsider.DOWNLOADS_PATH / str(download_id)
+    context.bot_data['downloads']['download_id'] = download_path
+
     try:
-        track_path = khinsider.fetch_and_download_track(message.text)
-    except khinsider.KhinsiderError:
+        (track_path,) = await khinsider.download(message.text, download_path)
+    except Exception:
         await message.reply_text("Couldn't get track :-(")
-        return
-
-    while True:
-        try:
-            await message.reply_audio(track_path)
-        except TimedOut:
-            continue
-        break
-
-    track_path.unlink(missing_ok=True)
-    track_path.parent.rmdir()
+        raise
+    else:
+        while True:
+            try:
+                await message.reply_audio(track_path)
+            except TimedOut:
+                continue
+            break
+    finally:
+        shutil.rmtree(download_path, ignore_errors=True)
+        context.bot_data['downloads'].pop('download_id')
 
 
 async def handle_album_url(
@@ -132,6 +141,7 @@ def main() -> None:
             handle_khinsider_url,
         )
     )
+    application.bot_data['downloads'] = {}
     application.run_polling()
 
 
