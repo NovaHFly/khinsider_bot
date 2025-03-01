@@ -2,13 +2,23 @@ import logging
 import os
 import random
 import shutil
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import khinsider
-from telegram import Message, Update
+from telegram import (
+    Message,
+    Update,
+)
 from telegram.constants import ReactionEmoji
 from telegram.error import TimedOut
-from telegram.ext import Application, ContextTypes, filters, MessageHandler
+from telegram.ext import (
+    Application,
+    ContextTypes,
+    filters,
+    MessageHandler,
+)
 
 logger = logging.getLogger('khinsider_bot')
 
@@ -38,6 +48,26 @@ def set_reaction_on_done(
         return decorator(handler)
 
     return decorator
+
+
+@contextmanager
+def setup_download(existing_downloads: dict | None = None) -> Iterator[Path]:
+    if existing_downloads is None:
+        existing_downloads = {}
+
+    while (
+        download_id := random.randint(1, 999999)
+    ) and download_id in existing_downloads:
+        pass
+
+    download_dir = existing_downloads[download_id] = (
+        khinsider.DOWNLOADS_PATH / str(download_id)
+    )
+    try:
+        yield download_dir
+    finally:
+        shutil.rmtree(download_dir, ignore_errors=True)
+        existing_downloads.pop(download_id, None)
 
 
 async def reply_with_album_details(
@@ -84,16 +114,10 @@ async def handle_track_url(
 
 async def handle_album_url(
     message: Message,
-    download_dir: Path,
 ) -> None:
     try:
         album_data = khinsider.get_album_data(message.text)
         await reply_with_album_details(message, album_data)
-        for track_path in khinsider.download(
-            message.text.splitlines()[0],
-            download_dir,
-        ):
-            await safe_reply_audio(message, track_path)
     except Exception:
         await message.reply_text("Couldn't get album data :-(")
         raise
@@ -105,13 +129,15 @@ async def handle_khinsider_url(
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     message = update.message
+    existing_downloads = context.bot_data['downloads']
 
     await message.set_reaction(ReactionEmoji.EYES)
+    if context.match[2]:
+        with setup_download(existing_downloads) as download_dir:
+            await handle_track_url(message, download_dir)
+        return
 
-    while (
-        download_id := random.randint(1, 999999)
-    ) and download_id in context.bot_data['downloads']:
-        pass
+    await handle_album_url(message)
 
     download_dir = khinsider.DOWNLOADS_PATH / str(download_id)
     context.bot_data['downloads'][download_id] = download_dir
