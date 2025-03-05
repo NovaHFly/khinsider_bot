@@ -70,21 +70,6 @@ def setup_download(existing_downloads: dict | None = None) -> Iterator[Path]:
         existing_downloads.pop(download_id, None)
 
 
-async def reply_with_album_details(
-    message: Message,
-    album: khinsider.Album,
-) -> None:
-    await message.reply_photo(
-        album.thumbnail_urls[0],
-        caption=(
-            f'{album.name}\n'
-            f'Year: {album.year}\n'
-            f'Type: {album.type}\n'
-            f'Track count: {album.track_count}'
-        ),
-    )
-
-
 async def safe_reply_audio(
     message: Message,
     audio_path: Path,
@@ -98,29 +83,46 @@ async def safe_reply_audio(
 
 
 async def handle_track_url(
-    message: Message,
-    download_dir: Path,
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
-    try:
-        (track_path,) = khinsider.download(
-            message.text.splitlines()[0],
-            download_dir,
-        )
-        await safe_reply_audio(message, track_path)
-    except Exception:
-        await message.reply_text("Couldn't get track :-(")
-        raise
+    message = update.message
+    existing_downloads = context.bot_data['downloads']
+    with setup_download(existing_downloads) as download_dir:
+        try:
+            (track_path,) = khinsider.download(
+                message.text.splitlines()[0],
+                download_dir,
+            )
+            await safe_reply_audio(message, track_path)
+        except Exception:
+            await message.reply_text("Couldn't get track :-(")
+            raise
 
 
 async def handle_album_url(
-    message: Message,
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
-    try:
-        album_data = khinsider.get_album_data(message.text)
-        await reply_with_album_details(message, album_data)
-    except Exception:
-        await message.reply_text("Couldn't get album data :-(")
-        raise
+    message = update.message
+
+    album = khinsider.get_album_data(
+        message.text.split()[0],
+    )
+
+    await message.reply_photo(
+        album.thumbnail_urls[0],
+        caption=(
+            f'{album.name}\n'
+            f'Year: {album.year}\n'
+            f'Type: {album.type}\n'
+            f'Track count: {album.track_count}'
+        ),
+    )
+
+    existing_downloads = context.bot_data['downloads']
+    track_paths = download_album_tracks(existing_downloads, album)
+    await send_tracks(message, track_paths)
 
 
 @set_reaction_on_done(success_reaction=ReactionEmoji.THUMBS_UP)
@@ -129,29 +131,32 @@ async def handle_khinsider_url(
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     message = update.message
-    existing_downloads = context.bot_data['downloads']
-
     await message.set_reaction(ReactionEmoji.EYES)
+
     if context.match[2]:
-        with setup_download(existing_downloads) as download_dir:
-            await handle_track_url(message, download_dir)
+        await handle_track_url(update, context)
         return
 
-    await handle_album_url(message)
+    await handle_album_url(update, context)
 
-    download_dir = khinsider.DOWNLOADS_PATH / str(download_id)
-    context.bot_data['downloads'][download_id] = download_dir
 
-    try:
-        if context.match[2]:
-            await handle_track_url(message, download_dir)
-            return
+def download_album_tracks(
+    existing_downloads: dict,
+    album: khinsider.Album,
+) -> Iterator[Path | None]:
+    with setup_download(existing_downloads) as download_dir:
+        yield from khinsider.download(album.url, download_dir)
 
-        await handle_album_url(message, download_dir)
 
-    finally:
-        shutil.rmtree(download_dir, ignore_errors=True)
-        context.bot_data['downloads'].pop(download_id)
+async def send_tracks(
+    message: Message,
+    track_paths: Iterator[Path | tuple[None, str]],
+) -> None:
+    for track_path in track_paths:
+        if track_path is None:
+            continue
+
+        await safe_reply_audio(message, track_path)
 
 
 def main() -> None:
