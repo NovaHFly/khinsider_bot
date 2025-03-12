@@ -22,6 +22,8 @@ from telegram.ext import (
 
 logger = logging.getLogger('khinsider_bot')
 
+downloader = khinsider.Downloader(max_workers=8)
+
 
 def set_reaction_on_done(
     handler=None,
@@ -90,9 +92,9 @@ async def handle_track_url(
     existing_downloads = context.bot_data['downloads']
     with setup_download(existing_downloads) as download_dir:
         try:
-            (track_path,) = khinsider.download(
+            (track_path,) = downloader.download(
                 message.text.splitlines()[0],
-                download_dir,
+                download_path=download_dir,
             )
             await safe_reply_audio(message, track_path)
         except Exception:
@@ -143,14 +145,14 @@ async def handle_khinsider_url(
 def download_album_tracks(
     existing_downloads: dict,
     album: khinsider.Album,
-) -> Iterator[Path | None]:
+) -> Iterator[Path]:
     with setup_download(existing_downloads) as download_dir:
-        yield from khinsider.download(album.url, download_dir)
+        yield from downloader.download(album.url, download_path=download_dir)
 
 
 async def send_tracks(
     message: Message,
-    track_paths: Iterator[Path | tuple[None, str]],
+    track_paths: Iterator[Path],
 ) -> None:
     for track_path in track_paths:
         if track_path is None:
@@ -178,6 +180,7 @@ def main() -> None:
     )
     application.bot_data['downloads'] = {}
     application.run_polling()
+    downloader.shutdown()
 
 
 if __name__ == '__main__':
