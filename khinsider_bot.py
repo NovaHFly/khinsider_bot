@@ -63,8 +63,8 @@ def setup_download(existing_downloads: dict | None = None) -> Iterator[Path]:
         pass
 
     download_dir = existing_downloads[download_id] = (
-        khinsider.DOWNLOADS_PATH / str(download_id)
-    )
+        Path(os.getenv('DOWNLOADS_PATH')) or khinsider.DOWNLOADS_PATH
+    ) / str(download_id)
     try:
         yield download_dir
     finally:
