@@ -80,14 +80,13 @@ def setup_download(existing_downloads: dict | None = None) -> Iterator[Path]:
 
 async def safe_reply_audio(
     message: Message,
-    audio_path: Path,
-) -> None:
+    audio_location: Path | str,
+) -> Message | None:
     while True:
         try:
-            await message.reply_audio(audio_path)
+            return await message.reply_audio(audio_location)
         except TimedOut:
             continue
-        break
 
 
 async def handle_track_url(
@@ -96,16 +95,21 @@ async def handle_track_url(
 ) -> None:
     message = update.message
     existing_downloads = context.bot_data['downloads']
-    with setup_download(existing_downloads) as download_dir:
-        try:
-            (track_path,) = downloader.download(
-                message.text.splitlines()[0],
-                download_path=download_dir,
-            )
-            await safe_reply_audio(message, track_path)
-        except Exception:
-            await message.reply_text("Couldn't get track :-(")
-            raise
+    try:
+        track_url = khinsider.get_track_data(
+            message.text.splitlines()[0]
+        ).mp3_url
+
+        if not await safe_reply_audio(message, track_url):
+            with setup_download(existing_downloads) as download_dir:
+                (track_path,) = downloader.download(
+                    message.text.splitlines()[0],
+                    download_path=download_dir,
+                )
+                await safe_reply_audio(message, track_path)
+    except Exception:
+        await message.reply_text("Couldn't get track :-(")
+        raise
 
 
 async def handle_album_url(

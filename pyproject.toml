@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "khinsider_bot"
-version = "0.1.0"
+version = "0.1.1"
 description = "Telegram bot to download soundtracks"
 authors = ["NovaHFly <mugiviska@gmail.com>"]
 license = "MIT"
