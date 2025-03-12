@@ -24,6 +24,12 @@ logger = logging.getLogger('khinsider_bot')
 
 downloader = khinsider.Downloader(max_workers=8)
 
+BOT_DATA_PATH = Path(os.getenv('BOT_DATA', './data'))
+BOT_DATA_PATH.mkdir(exist_ok=True, parents=True)
+
+ROOT_DOWNLOADS_PATH = BOT_DATA_PATH / 'downloads'
+ROOT_DOWNLOADS_PATH.mkdir(exist_ok=True, parents=True)
+
 
 def set_reaction_on_done(
     handler=None,
@@ -62,9 +68,9 @@ def setup_download(existing_downloads: dict | None = None) -> Iterator[Path]:
     ) and download_id in existing_downloads:
         pass
 
-    download_dir = existing_downloads[download_id] = (
-        Path(os.getenv('DOWNLOADS_PATH')) or khinsider.DOWNLOADS_PATH
-    ) / str(download_id)
+    download_dir = (ROOT_DOWNLOADS_PATH) / str(download_id)
+    existing_downloads[download_id] = download_dir
+
     try:
         yield download_dir
     finally:
@@ -165,7 +171,7 @@ async def send_tracks(
 def main() -> None:
     logging.basicConfig(
         level=logging.INFO,
-        filename='main.log',
+        filename=BOT_DATA_PATH / 'main.log',
         filemode='a',
         format='%(asctime)s, %(levelname)s, %(message)s, %(name)s',
     )
