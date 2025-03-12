@@ -157,6 +157,7 @@ async def send_tracks(
             continue
 
         await safe_reply_audio(message, track_path)
+        track_path.unlink(missing_ok=True)
 
 
 def main() -> None:
