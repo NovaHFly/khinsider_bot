@@ -99,6 +99,7 @@ def set_error_reaction(
 
 @contextmanager
 def setup_download(existing_downloads: dict | None = None) -> Iterator[Path]:
+    """Setup download path and remove it when done."""
     if existing_downloads is None:
         existing_downloads = {}
 
@@ -121,6 +122,7 @@ async def safe_reply_audio(
     message: Message,
     audio_location: Path | str,
 ) -> Message | None:
+    """Send audio safely, retrying on telegram timeout."""
     while True:
         try:
             return await message.reply_audio(audio_location)
