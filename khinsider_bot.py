@@ -16,6 +16,7 @@ from telegram.constants import ReactionEmoji
 from telegram.error import TimedOut
 from telegram.ext import (
     Application,
+    CommandHandler,
     ContextTypes,
     filters,
     MessageHandler,
@@ -203,6 +204,35 @@ async def handle_khinsider_url(
     await handle_album_url(update, context)
 
 
+async def handle_start_command(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    await update.message.reply_text(
+        'Hello! I am khinsider bot.'
+        '\nI can download albums and tracks from downloads.khinsider.com.'
+        '\nJust send me the album or track url.',
+    )
+
+
+async def handle_help_command(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    await update.message.reply_text(
+        'To download audio from downloads.khinsider.com just send me url.\n'
+        '\n'
+        '- Send album url to download whole album.\n'
+        'https://downloads.khinsider.com/game-soundtracks'
+        '/album/persona-3-reload-original-soundtrack-2024\n'
+        '\n'
+        '- Send track url to download specific track.\n'
+        'https://downloads.khinsider.com/game-soundtracks'
+        '/album/persona-3-reload-original-soundtrack-2024'
+        '/2-20.%2520Battle%2520Hymn%2520of%2520the%2520Soul%2520%2528P3R%2520ver.%2529.mp3\n',
+    )
+
+
 def main() -> None:
     logging.basicConfig(
         level=logging.INFO,
@@ -213,12 +243,16 @@ def main() -> None:
     application = (
         Application.builder().token(os.getenv('TELEGRAM_TOKEN')).build()
     )
+
     application.add_handler(
         MessageHandler(
             filters.Regex(khinsider.KHINSIDER_URL_REGEX),
             handle_khinsider_url,
         )
     )
+    application.add_handler(CommandHandler('start', handle_start_command))
+    application.add_handler(CommandHandler('help', handle_help_command))
+
     application.bot_data['downloads'] = {}
     application.run_polling()
     downloader.shutdown()
