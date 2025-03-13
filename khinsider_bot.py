@@ -180,12 +180,9 @@ async def handle_album_url(
     )
 
     with setup_download(context.bot_data['downloads']) as download_dir:
-        for track in album.tracks:
-            if track.mp3_url and await safe_reply_audio(
-                message,
-                track.mp3_url,
-            ):
-                return
+        for track in downloader.fetch_tracks(album.track_urls):
+            if await safe_reply_audio(message, track.mp3_url):
+                continue
 
             (track_path,) = downloader.download(track.page_url, download_dir)
             await safe_reply_audio(message, track_path)
