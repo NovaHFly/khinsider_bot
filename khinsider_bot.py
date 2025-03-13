@@ -99,17 +99,19 @@ async def handle_track_url(
         track_url = khinsider.get_track_data(
             message.text.splitlines()[0]
         ).mp3_url
-
-        if not await safe_reply_audio(message, track_url):
-            with setup_download(existing_downloads) as download_dir:
-                (track_path,) = downloader.download(
-                    message.text.splitlines()[0],
-                    download_path=download_dir,
-                )
-                await safe_reply_audio(message, track_path)
     except Exception:
         await message.reply_text("Couldn't get track :-(")
         raise
+
+    if await safe_reply_audio(message, track_url):
+        return
+
+    with setup_download(existing_downloads) as download_dir:
+        (track_path,) = downloader.download(
+            message.text.splitlines()[0],
+            download_path=download_dir,
+        )
+        await safe_reply_audio(message, track_path)
 
 
 async def handle_album_url(
