@@ -132,9 +132,17 @@ async def handle_album_url(
         ),
     )
 
-    existing_downloads = context.bot_data['downloads']
-    track_paths = download_album_tracks(existing_downloads, album)
-    await send_tracks(message, track_paths)
+    with setup_download(context.bot_data['downloads']) as download_dir:
+        for track in album.tracks:
+            if track.mp3_url and await safe_reply_audio(
+                message,
+                track.mp3_url,
+            ):
+                return
+
+            (track_path,) = downloader.download(track.page_url, download_dir)
+            await safe_reply_audio(message, track_path)
+            track_path.unlink(missing_ok=True)
 
 
 @set_reaction_on_done(success_reaction=ReactionEmoji.THUMBS_UP)
@@ -150,26 +158,6 @@ async def handle_khinsider_url(
         return
 
     await handle_album_url(update, context)
-
-
-def download_album_tracks(
-    existing_downloads: dict,
-    album: khinsider.Album,
-) -> Iterator[Path]:
-    with setup_download(existing_downloads) as download_dir:
-        yield from downloader.download(album.url, download_path=download_dir)
-
-
-async def send_tracks(
-    message: Message,
-    track_paths: Iterator[Path],
-) -> None:
-    for track_path in track_paths:
-        if track_path is None:
-            continue
-
-        await safe_reply_audio(message, track_path)
-        track_path.unlink(missing_ok=True)
 
 
 def main() -> None:
