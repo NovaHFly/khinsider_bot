@@ -126,7 +126,7 @@ all = ["flake8 (>=7.1.1)", "mypy (>=1.11.2)", "pytest (>=8.3.2)", "ruff (>=0.6.2
 
 [[package]]
 name = "khinsider-downloader"
-version = "0.5.0"
+version = "0.1.7"
 description = ""
 optional = false
 python-versions = "^3.12"
@@ -143,7 +143,7 @@ tenacity = "^9.0.0"
 type = "git"
 url = "https://github.com/NovaHFly/khinsider_downloader"
 reference = "HEAD"
-resolved_reference = "b2581a5941d6793e0bcbfff9abcd72e05013f7f7"
+resolved_reference = "74728f97ad0f3b593fa5c8789a4928f41b248766"
 
 [[package]]
 name = "lxml"
