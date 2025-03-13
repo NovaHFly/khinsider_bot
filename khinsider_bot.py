@@ -2,8 +2,9 @@ import logging
 import os
 import random
 import shutil
-from collections.abc import Iterator
+from collections.abc import Awaitable, Callable, Iterator
 from contextlib import contextmanager
+from functools import wraps
 from pathlib import Path
 
 import khinsider
@@ -31,29 +32,67 @@ ROOT_DOWNLOADS_PATH = BOT_DATA_PATH / 'downloads'
 ROOT_DOWNLOADS_PATH.mkdir(exist_ok=True, parents=True)
 
 
-def set_reaction_on_done(
-    handler=None,
-    *,
-    success_reaction: ReactionEmoji | None = None,
-    error_reaction: ReactionEmoji | None = ReactionEmoji.SEE_NO_EVIL_MONKEY,
-):
-    def decorator(handler):
+SimpleMessageHandler = Callable[
+    [Update, ContextTypes.DEFAULT_TYPE], Awaitable[None]
+]
+
+
+def set_noticed_reaction(
+    reaction: ReactionEmoji = ReactionEmoji.EYES,
+) -> Callable[[SimpleMessageHandler], SimpleMessageHandler]:
+    """Set reaction when bot has noticed the message."""
+
+    def decorator(handler: SimpleMessageHandler) -> SimpleMessageHandler:
+        @wraps(handler)
         async def handler_wrapper(
             update: Update,
             context: ContextTypes.DEFAULT_TYPE,
-        ):
-            try:
-                result = await handler(update, context)
-                await update.message.set_reaction(success_reaction)
-                return result
-            except Exception:
-                await update.message.set_reaction(error_reaction)
-                raise
+        ) -> None:
+            await update.message.set_reaction(reaction)
+            await handler(update, context)
 
         return handler_wrapper
 
-    if handler:
-        return decorator(handler)
+    return decorator
+
+
+def set_success_reaction(
+    reaction: ReactionEmoji = ReactionEmoji.THUMBS_UP,
+) -> Callable[[SimpleMessageHandler], SimpleMessageHandler]:
+    """Set reaction when bot has successfully finished the task."""
+
+    def decorator(handler: SimpleMessageHandler) -> SimpleMessageHandler:
+        @wraps(handler)
+        async def handler_wrapper(
+            update: Update,
+            context: ContextTypes.DEFAULT_TYPE,
+        ) -> None:
+            await handler(update, context)
+            await update.message.set_reaction(reaction)
+
+        return handler_wrapper
+
+    return decorator
+
+
+def set_error_reaction(
+    reaction: ReactionEmoji = ReactionEmoji.SEE_NO_EVIL_MONKEY,
+) -> Callable[[SimpleMessageHandler], SimpleMessageHandler]:
+    """Set reaction when task was aborted due to an error."""
+
+    def decorator(handler: SimpleMessageHandler) -> SimpleMessageHandler:
+        @wraps(handler)
+        async def handler_wrapper(
+            update: Update,
+            context: ContextTypes.DEFAULT_TYPE,
+        ) -> None:
+            try:
+                await handler(update, context)
+            except Exception:
+                await update.message.set_reaction(reaction)
+                raise
+
+        return handler_wrapper
 
     return decorator
 
@@ -151,14 +190,13 @@ async def handle_album_url(
             track_path.unlink(missing_ok=True)
 
 
-@set_reaction_on_done(success_reaction=ReactionEmoji.THUMBS_UP)
+@set_noticed_reaction(reaction=ReactionEmoji.EYES)
+@set_error_reaction(reaction=ReactionEmoji.SEE_NO_EVIL_MONKEY)
+@set_success_reaction(reaction=ReactionEmoji.THUMBS_UP)
 async def handle_khinsider_url(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
-    message = update.message
-    await message.set_reaction(ReactionEmoji.EYES)
-
     if context.match[2]:
         await handle_track_url(update, context)
         return
