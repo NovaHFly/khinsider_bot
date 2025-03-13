@@ -118,9 +118,13 @@ async def handle_album_url(
 ) -> None:
     message = update.message
 
-    album = khinsider.get_album_data(
-        message.text.split()[0],
-    )
+    try:
+        album = khinsider.get_album_data(
+            message.text.split()[0],
+        )
+    except Exception:
+        await message.reply_text("Couldn't get album data :-(")
+        raise
 
     await message.reply_photo(
         album.thumbnail_urls[0],
