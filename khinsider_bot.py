@@ -244,6 +244,7 @@ def main() -> None:
         Application.builder()
         .token(os.getenv('TELEGRAM_TOKEN'))
         .read_timeout(30)
+        .write_timeout(35)
         .build()
     )
 
