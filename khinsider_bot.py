@@ -241,7 +241,10 @@ def main() -> None:
         format='%(asctime)s, %(levelname)s, %(message)s, %(name)s',
     )
     application = (
-        Application.builder().token(os.getenv('TELEGRAM_TOKEN')).build()
+        Application.builder()
+        .token(os.getenv('TELEGRAM_TOKEN'))
+        .read_timeout(30)
+        .build()
     )
 
     application.add_handler(
