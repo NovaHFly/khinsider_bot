@@ -2,6 +2,7 @@ import logging
 import os
 import random
 import shutil
+import time
 from collections.abc import Awaitable, Callable, Iterator
 from contextlib import contextmanager
 from functools import wraps
@@ -128,6 +129,7 @@ async def safe_reply_audio(
         try:
             return await message.reply_audio(audio_location)
         except TimedOut:
+            time.sleep(5)
             continue
 
 
