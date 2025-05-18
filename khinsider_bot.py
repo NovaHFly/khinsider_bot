@@ -266,7 +266,6 @@ def main() -> None:
         port=8010,
         url_path='khinsider_bot',
         webhook_url=os.getenv('WEBHOOK_URL'),
-        cert=os.getenv('CERT_PATH'),
         secret_token=os.getenv('TELEGRAM_SECRET_TOKEN'),
     )
     downloader.shutdown()
