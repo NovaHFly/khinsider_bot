@@ -260,7 +260,14 @@ def main() -> None:
     application.add_handler(CommandHandler('help', handle_help_command))
 
     application.bot_data['downloads'] = {}
-    application.run_polling()
+
+    application.run_webhook(
+        listen='127.0.0.1',
+        port=8010,
+        webhook_url=os.getenv('WEBHOOK_URL'),
+        cert=os.getenv('CERT_PATH'),
+        secret_token=os.getenv('TELEGRAM_SECRET_TOKEN'),
+    )
     downloader.shutdown()
 
 
