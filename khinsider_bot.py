@@ -264,6 +264,7 @@ def main() -> None:
     application.run_webhook(
         listen='127.0.0.1',
         port=8010,
+        url_path='khinsider_bot',
         webhook_url=os.getenv('WEBHOOK_URL'),
         cert=os.getenv('CERT_PATH'),
         secret_token=os.getenv('TELEGRAM_SECRET_TOKEN'),
