@@ -9,7 +9,7 @@ packages = [{ include = "khinsider_bot.py" }]
 
 [tool.poetry.dependencies]
 python = "^3.12"
-python-telegram-bot = "^21.10"
+python-telegram-bot = {extras = ["webhooks"], version = "^22.1"}
 khinsider-downloader = {git = "https://github.com/NovaHFly/khinsider_downloader"}
 
 
