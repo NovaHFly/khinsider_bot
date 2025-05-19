@@ -292,9 +292,9 @@ async def main() -> None:
     webserver = uvicorn.Server(
         config=uvicorn.Config(
             app=starlette_app,
-            port=80,
             use_colors=False,
-            host='127.0.0.1',
+            port=os.getenv('PORT'),
+            host=os.getenv('HOSTNAME'),
         )
     )
 
