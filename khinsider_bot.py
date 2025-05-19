@@ -262,9 +262,6 @@ def main() -> None:
     application.bot_data['downloads'] = {}
 
     application.run_webhook(
-        listen='127.0.0.1',
-        port=8010,
-        url_path='khinsider_bot',
         webhook_url=os.getenv('WEBHOOK_URL'),
         secret_token=os.getenv('TELEGRAM_SECRET_TOKEN'),
     )
