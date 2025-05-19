@@ -5,5 +5,6 @@
 *.log
 __pycache__
 /downloads
+/bot_data
 README.md
 LICENSE

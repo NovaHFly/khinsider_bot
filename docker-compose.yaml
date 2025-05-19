@@ -5,16 +5,9 @@ volumes:
 
 services:
   bot:
-    image: novahfly/khinsider_bot:0.1.5-dev
+    image: novahfly/khinsider_bot:latest
     env_file: .env
-    volumes:
-      - ./bot_data:/bot_data
-
-  proxy:
-    image: nginx:1.25.4-alpine
     ports:
       - 8010:80
-    depends_on:
-      - bot
     volumes:
-      - ./nginx.conf:/etc/nginx/templates/default.conf.template
+      - ./bot_data:/bot_data
