@@ -19,7 +19,7 @@ from telegram import (
     Message,
     Update,
 )
-from telegram.constants import ReactionEmoji
+from telegram.constants import ChatAction, ReactionEmoji
 from telegram.error import TimedOut
 from telegram.ext import (
     Application,
@@ -133,6 +133,7 @@ async def safe_reply_audio(
     """Send audio safely, retrying on telegram timeout."""
     while True:
         try:
+            await message.reply_chat_action(ChatAction.UPLOAD_DOCUMENT)
             return await message.reply_audio(audio_location)
         except TimedOut:
             time.sleep(5)
