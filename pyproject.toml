@@ -11,6 +11,8 @@ packages = [{ include = "khinsider_bot.py" }]
 python = "^3.12"
 python-telegram-bot = {extras = ["webhooks"], version = "^22.1"}
 khinsider-downloader = {git = "https://github.com/NovaHFly/khinsider_downloader"}
+starlette = "^0.46.2"
+uvicorn = "^0.34.2"
 
 
 [build-system]

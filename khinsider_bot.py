@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import random
@@ -9,6 +10,11 @@ from functools import wraps
 from pathlib import Path
 
 import khinsider
+import uvicorn
+from starlette.applications import Starlette
+from starlette.requests import Request
+from starlette.responses import PlainTextResponse, Response
+from starlette.routing import Route
 from telegram import (
     Message,
     Update,
@@ -235,7 +241,7 @@ async def handle_help_command(
     )
 
 
-def main() -> None:
+async def main() -> None:
     logging.basicConfig(
         level=logging.INFO,
         filename=BOT_DATA_PATH / 'main.log',
@@ -247,6 +253,7 @@ def main() -> None:
         .token(os.getenv('TELEGRAM_TOKEN'))
         .read_timeout(30)
         .write_timeout(35)
+        .updater(None)
         .build()
     )
 
@@ -261,12 +268,44 @@ def main() -> None:
 
     application.bot_data['downloads'] = {}
 
-    application.run_webhook(
-        webhook_url=os.getenv('WEBHOOK_URL'),
-        secret_token=os.getenv('TELEGRAM_SECRET_TOKEN'),
+    await application.bot.set_webhook(
+        url=os.getenv('WEBHOOK_URL'),
+        allowed_updates=Update.ALL_TYPES,
     )
+
+    async def telegram(request: Request) -> Response:
+        await application.update_queue.put(
+            Update.de_json(data=await request.json(), bot=application.bot)
+        )
+        return Response()
+
+    async def health(_: Request) -> PlainTextResponse:
+        """For the health endpoint, reply with a simple plain text message."""
+        return PlainTextResponse(content='The bot is still running fine :)')
+
+    starlette_app = Starlette(
+        routes=[
+            Route('/', telegram, methods=['POST']),
+            Route('/healthcheck/', health, methods=['GET']),
+        ]
+    )
+    webserver = uvicorn.Server(
+        config=uvicorn.Config(
+            app=starlette_app,
+            port=80,
+            use_colors=False,
+            host='127.0.0.1',
+        )
+    )
+
+    # Run application and webserver together
+    async with application:
+        await application.start()
+        await webserver.serve()
+        await application.stop()
+
     downloader.shutdown()
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
