@@ -33,7 +33,7 @@ logger = logging.getLogger('khinsider_bot')
 
 downloader = khinsider.Downloader(max_workers=8)
 
-BOT_DATA_PATH = Path(os.getenv('BOT_DATA', './data'))
+BOT_DATA_PATH = Path('/bot_data')
 BOT_DATA_PATH.mkdir(exist_ok=True, parents=True)
 
 ROOT_DOWNLOADS_PATH = BOT_DATA_PATH / 'downloads'
