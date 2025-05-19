@@ -134,9 +134,9 @@ async def safe_reply_audio(
     while True:
         try:
             await message.reply_chat_action(ChatAction.UPLOAD_DOCUMENT)
+            time.sleep(1)
             return await message.reply_audio(audio_location)
         except TimedOut:
-            time.sleep(5)
             continue
 
 
