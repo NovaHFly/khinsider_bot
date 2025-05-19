@@ -8,6 +8,6 @@ services:
     image: novahfly/khinsider_bot:latest
     env_file: .env
     ports:
-      - 8010:80
+      - 127.0.0.1:8010:80
     volumes:
       - ./bot_data:/bot_data
