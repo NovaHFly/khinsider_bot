@@ -1,3 +1,6 @@
+import os
+
+import uvicorn
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response
@@ -24,4 +27,13 @@ starlette_app = Starlette(
         Route('/', telegram, methods=['POST']),
         Route('/healthcheck/', health, methods=['GET']),
     ]
+)
+
+webserver = uvicorn.Server(
+    config=uvicorn.Config(
+        app=starlette_app,
+        use_colors=False,
+        port=os.getenv('PORT'),
+        host=os.getenv('HOSTNAME'),
+    )
 )
