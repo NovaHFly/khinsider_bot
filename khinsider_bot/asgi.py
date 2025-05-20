@@ -1,11 +1,11 @@
-import os
+from os import getenv
 
-import uvicorn
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response
 from starlette.routing import Route
 from telegram import Update
+from uvicorn import Config, Server
 
 from .bot import application
 
@@ -29,11 +29,11 @@ starlette_app = Starlette(
     ]
 )
 
-webserver = uvicorn.Server(
-    config=uvicorn.Config(
+webserver = Server(
+    config=Config(
         app=starlette_app,
         use_colors=False,
-        port=os.getenv('PORT'),
-        host=os.getenv('HOSTNAME'),
+        port=getenv('PORT'),
+        host=getenv('HOSTNAME'),
     )
 )
