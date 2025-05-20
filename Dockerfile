@@ -16,6 +16,6 @@ FROM base AS final
 WORKDIR /app
 
 COPY --from=build /build/.venv .venv
-COPY ./khinsider_bot.py ./khinsider_bot.py
+COPY ./khinsider_bot ./khinsider_bot
 
 CMD [".venv/bin/python", "-m", "khinsider_bot"]
