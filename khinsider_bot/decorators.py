@@ -1,28 +1,21 @@
 from collections.abc import Awaitable, Callable
 from functools import wraps
 
-from telegram import Update
-from telegram.constants import ReactionEmoji
-from telegram.ext import ContextTypes
+from aiogram.types import Message, ReactionTypeEmoji
 
-SimpleMessageHandler = Callable[
-    [Update, ContextTypes.DEFAULT_TYPE], Awaitable[None]
-]
+from .enums import ReactionEmoji
 
 
 def set_noticed_reaction(
     reaction: ReactionEmoji = ReactionEmoji.EYES,
-) -> Callable[[SimpleMessageHandler], SimpleMessageHandler]:
+) -> Callable[[Awaitable], Awaitable]:
     """Set reaction when bot has noticed the message."""
 
-    def decorator(handler: SimpleMessageHandler) -> SimpleMessageHandler:
+    def decorator(handler: Awaitable) -> Awaitable:
         @wraps(handler)
-        async def handler_wrapper(
-            update: Update,
-            context: ContextTypes.DEFAULT_TYPE,
-        ) -> None:
-            await update.message.set_reaction(reaction)
-            await handler(update, context)
+        async def handler_wrapper(message: Message, *args, **kwargs) -> None:
+            await message.react([ReactionTypeEmoji(emoji=reaction)])
+            await handler(message, *args, **kwargs)
 
         return handler_wrapper
 
@@ -31,17 +24,14 @@ def set_noticed_reaction(
 
 def set_success_reaction(
     reaction: ReactionEmoji = ReactionEmoji.THUMBS_UP,
-) -> Callable[[SimpleMessageHandler], SimpleMessageHandler]:
+) -> Callable[[Awaitable], Awaitable]:
     """Set reaction when bot has successfully finished the task."""
 
-    def decorator(handler: SimpleMessageHandler) -> SimpleMessageHandler:
+    def decorator(handler: Awaitable) -> Awaitable:
         @wraps(handler)
-        async def handler_wrapper(
-            update: Update,
-            context: ContextTypes.DEFAULT_TYPE,
-        ) -> None:
-            await handler(update, context)
-            await update.message.set_reaction(reaction)
+        async def handler_wrapper(message: Message, *args, **kwargs) -> None:
+            await handler(message, *args, **kwargs)
+            await message.react([ReactionTypeEmoji(emoji=reaction)])
 
         return handler_wrapper
 
@@ -49,20 +39,17 @@ def set_success_reaction(
 
 
 def set_error_reaction(
-    reaction: ReactionEmoji = ReactionEmoji.SEE_NO_EVIL_MONKEY,
-) -> Callable[[SimpleMessageHandler], SimpleMessageHandler]:
+    reaction: ReactionEmoji = ReactionEmoji.SEE_NO_EVIL,
+) -> Callable[[Awaitable], Awaitable]:
     """Set reaction when task was aborted due to an error."""
 
-    def decorator(handler: SimpleMessageHandler) -> SimpleMessageHandler:
+    def decorator(handler: Awaitable) -> Awaitable:
         @wraps(handler)
-        async def handler_wrapper(
-            update: Update,
-            context: ContextTypes.DEFAULT_TYPE,
-        ) -> None:
+        async def handler_wrapper(message: Message, *args, **kwargs) -> None:
             try:
-                await handler(update, context)
+                await handler(message, *args, **kwargs)
             except Exception:
-                await update.message.set_reaction(reaction)
+                await message.react([ReactionTypeEmoji(emoji=reaction)])
                 raise
 
         return handler_wrapper

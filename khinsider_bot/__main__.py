@@ -1,11 +1,15 @@
 from asyncio import run
-from logging import basicConfig as setup_logging, INFO
+from logging import (
+    basicConfig as setup_logging,
+    FileHandler,
+    INFO,
+    StreamHandler,
+)
 from os import getenv
-
-from telegram import Update
+from sys import stdout
 
 from .asgi import webserver
-from .bot import application
+from .bot import bot
 from .constants import BOT_DATA_PATH
 from .core import downloader
 
@@ -13,22 +17,20 @@ from .core import downloader
 async def main() -> None:
     setup_logging(
         level=INFO,
-        filename=BOT_DATA_PATH / 'main.log',
-        filemode='a',
         format='%(asctime)s, %(levelname)s, %(message)s, %(name)s',
+        handlers=[
+            FileHandler(BOT_DATA_PATH / 'main.log'),
+            StreamHandler(stdout),
+        ],
     )
-    await application.bot.set_webhook(
+    await bot.set_webhook(
         url=getenv('WEBHOOK_URL'),
-        allowed_updates=Update.ALL_TYPES,
+        secret_token=getenv('WEBHOOK_TOKEN'),
     )
 
-    # Run application and webserver together
-    async with application:
-        await application.start()
-        await webserver.serve()
-        await application.stop()
+    await webserver.serve()
 
-        downloader.shutdown()
+    downloader.shutdown()
 
 
 if __name__ == '__main__':

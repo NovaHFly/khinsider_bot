@@ -4,15 +4,15 @@ from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response
 from starlette.routing import Route
-from telegram import Update
 from uvicorn import Config, Server
 
-from .bot import application
+from .bot import bot, dispatcher
 
 
 async def telegram(request: Request) -> Response:
-    await application.update_queue.put(
-        Update.de_json(data=await request.json(), bot=application.bot)
+    await dispatcher.feed_webhook_update(
+        bot=bot,
+        update=await request.json(),
     )
     return Response()
 
@@ -32,7 +32,6 @@ starlette_app = Starlette(
 webserver = Server(
     config=Config(
         app=starlette_app,
-        use_colors=False,
         port=getenv('PORT'),
         host=getenv('HOSTNAME'),
     )

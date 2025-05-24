@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "khinsider_bot"
-version = "0.1.8"
+version = "0.2.0"
 description = "Telegram bot to download soundtracks"
 authors = ["NovaHFly <mugiviska@gmail.com>"]
 license = "MIT"
@@ -8,10 +8,10 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-python-telegram-bot = "^22.1"
-khinsider-downloader = {git = "https://github.com/NovaHFly/khinsider_downloader"}
+khinsider-downloader = { git = "https://github.com/NovaHFly/khinsider_downloader" }
 starlette = "^0.46.2"
 uvicorn = "^0.34.2"
+aiogram = "^3.20.0.post0"
 
 
 [build-system]

@@ -1,16 +1,15 @@
-from logging import getLogger
 from os import getenv
+from pathlib import Path
+from re import Match
+from time import sleep
 
+from aiogram import Bot, Dispatcher, F
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ChatAction, ParseMode
+from aiogram.exceptions import TelegramNetworkError
+from aiogram.filters import Command, CommandStart
+from aiogram.types import Message
 from khinsider import get_album_data, get_track_data, KHINSIDER_URL_REGEX
-from telegram import Update
-from telegram.constants import ReactionEmoji
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    ContextTypes,
-    filters,
-    MessageHandler,
-)
 
 from .core import downloader
 from .decorators import (
@@ -18,50 +17,62 @@ from .decorators import (
     set_noticed_reaction,
     set_success_reaction,
 )
-from .util import safe_reply_audio, setup_download
+from .enums import ReactionEmoji
+from .util import setup_download
 
-# TODO: Add logging
-logger = getLogger('khinsider_bot')
+bot = Bot(
+    token=getenv('TELEGRAM_TOKEN'),
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+)
+
+dispatcher = Dispatcher()
 
 
-async def handle_track_url(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-) -> None:
-    message = update.message
-    existing_downloads = context.bot_data['downloads']
+async def safe_reply_audio(
+    message: Message,
+    audio_location: Path | str,
+) -> Message | None:
+    """Send audio safely, retrying on telegram network error."""
+    while True:
+        try:
+            await message.chat.do(ChatAction.UPLOAD_DOCUMENT)
+            sleep(1)
+            return await message.answer_audio(audio_location)
+        except TelegramNetworkError:
+            continue
+
+
+async def handle_track_url(message: Message) -> None:
+    # Read only first line
+    cleaned_text = message.text.splitlines()[0]
     try:
-        track_url = get_track_data(message.text.splitlines()[0]).mp3_url
+        track_url = get_track_data(cleaned_text).mp3_url
+
     except Exception:
-        await message.reply_text("Couldn't get track :-(")
+        await message.answer("Couldn't get track :-(")
         raise
 
     if await safe_reply_audio(message, track_url):
         return
 
-    with setup_download(existing_downloads) as download_dir:
+    with setup_download(_pending_downloads) as download_dir:
         (track_path,) = downloader.download(
-            message.text.splitlines()[0],
+            cleaned_text,
             download_path=download_dir,
         )
         await safe_reply_audio(message, track_path)
 
 
-async def handle_album_url(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-) -> None:
-    message = update.message
+async def handle_album_url(message: Message) -> None:
+    cleaned_text = message.text.splitlines()[0]
 
     try:
-        album = get_album_data(
-            message.text.split()[0],
-        )
+        album = get_album_data(cleaned_text)
     except Exception:
-        await message.reply_text("Couldn't get album data :-(")
+        await message.answer("Couldn't get album data :-(")
         raise
 
-    await message.reply_photo(
+    await message.answer_photo(
         album.thumbnail_urls[0],
         caption=(
             f'{album.name}\n'
@@ -70,8 +81,7 @@ async def handle_album_url(
             f'Track count: {album.track_count}'
         ),
     )
-
-    with setup_download(context.bot_data['downloads']) as download_dir:
+    with setup_download(_pending_downloads) as download_dir:
         for track in downloader.fetch_tracks(album.track_urls):
             if await safe_reply_audio(message, track.mp3_url):
                 continue
@@ -81,36 +91,30 @@ async def handle_album_url(
             track_path.unlink(missing_ok=True)
 
 
+@dispatcher.message(F.text.regexp(KHINSIDER_URL_REGEX).as_('match'))
 @set_noticed_reaction(reaction=ReactionEmoji.EYES)
-@set_error_reaction(reaction=ReactionEmoji.SEE_NO_EVIL_MONKEY)
+@set_error_reaction(reaction=ReactionEmoji.SEE_NO_EVIL)
 @set_success_reaction(reaction=ReactionEmoji.THUMBS_UP)
-async def handle_khinsider_url(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-) -> None:
-    if context.match[2]:
-        await handle_track_url(update, context)
+async def handle_khinsider_url(message: Message, match: Match) -> None:
+    if match[2]:
+        await handle_track_url(message)
         return
 
-    await handle_album_url(update, context)
+    await handle_album_url(message)
 
 
-async def handle_start_command(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-) -> None:
-    await update.message.reply_text(
+@dispatcher.message(CommandStart())
+async def handle_start_command(message: Message) -> None:
+    await message.answer(
         'Hello! I am khinsider bot.'
         '\nI can download albums and tracks from downloads.khinsider.com.'
         '\nJust send me the album or track url.',
     )
 
 
-async def handle_help_command(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-) -> None:
-    await update.message.reply_text(
+@dispatcher.message(Command('help'))
+async def handle_help_command(message: Message) -> None:
+    await message.answer(
         'To download audio from downloads.khinsider.com just send me url.\n'
         '\n'
         '- Send album url to download whole album.\n'
@@ -124,22 +128,4 @@ async def handle_help_command(
     )
 
 
-application = (
-    Application.builder()
-    .token(getenv('TELEGRAM_TOKEN'))
-    .read_timeout(30)
-    .write_timeout(35)
-    .updater(None)
-    .build()
-)
-
-application.add_handler(
-    MessageHandler(
-        filters.Regex(KHINSIDER_URL_REGEX),
-        handle_khinsider_url,
-    )
-)
-application.add_handler(CommandHandler('start', handle_start_command))
-application.add_handler(CommandHandler('help', handle_help_command))
-
-application.bot_data['downloads'] = {}
+_pending_downloads = {}
