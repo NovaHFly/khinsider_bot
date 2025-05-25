@@ -18,4 +18,4 @@ WORKDIR /app
 COPY --from=build /build/.venv .venv
 COPY ./khinsider_bot ./khinsider_bot
 
-CMD [".venv/bin/python", "-m", "khinsider_bot"]
+CMD [".venv/bin/python", "-m", "khinsider_bot", "-w"]
