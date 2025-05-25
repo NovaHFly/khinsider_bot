@@ -1,7 +1,7 @@
 from enum import StrEnum
 
 
-class ReactionEmoji(StrEnum):
+class Emoji(StrEnum):
     THUMBS_UP = '👍'
     THUMBS_DOWN = '👎'
     HEART = '❤'

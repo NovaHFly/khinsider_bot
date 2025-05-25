@@ -17,7 +17,7 @@ from .decorators import (
     set_noticed_reaction,
     set_success_reaction,
 )
-from .enums import ReactionEmoji
+from .enums import Emoji
 from .util import setup_download
 
 bot = Bot(
@@ -92,9 +92,9 @@ async def handle_album_url(message: Message) -> None:
 
 
 @dispatcher.message(F.text.regexp(KHINSIDER_URL_REGEX).as_('match'))
-@set_noticed_reaction(reaction=ReactionEmoji.EYES)
-@set_error_reaction(reaction=ReactionEmoji.SEE_NO_EVIL)
-@set_success_reaction(reaction=ReactionEmoji.THUMBS_UP)
+@set_noticed_reaction(emoji=Emoji.EYES)
+@set_error_reaction(emoji=Emoji.SEE_NO_EVIL)
+@set_success_reaction(emoji=Emoji.THUMBS_UP)
 async def handle_khinsider_url(message: Message, match: Match) -> None:
     if match[2]:
         await handle_track_url(message)
