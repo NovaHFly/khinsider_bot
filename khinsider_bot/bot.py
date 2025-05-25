@@ -1,3 +1,5 @@
+from collections.abc import Iterator
+from logging import getLogger
 from os import getenv
 from pathlib import Path
 from re import Match
@@ -10,6 +12,7 @@ from aiogram.exceptions import TelegramNetworkError
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 from khinsider import get_album_data, get_track_data, KHINSIDER_URL_REGEX
+from magic_filter import RegexpMode
 
 from .core import downloader
 from .decorators import (
@@ -19,6 +22,8 @@ from .decorators import (
 )
 from .enums import Emoji
 from .util import setup_download
+
+logger = getLogger('khinsider_bot')
 
 bot = Bot(
     token=getenv('TELEGRAM_TOKEN'),
@@ -42,11 +47,11 @@ async def safe_reply_audio(
             continue
 
 
-async def handle_track_url(message: Message) -> None:
-    # Read only first line
-    cleaned_text = message.text.splitlines()[0]
+async def handle_track_url(message: Message, match: Match) -> None:
+    message_text = match[0]
+
     try:
-        track_url = get_track_data(cleaned_text).mp3_url
+        track_url = get_track_data(message_text).mp3_url
 
     except Exception:
         await message.answer("Couldn't get track :-(")
@@ -57,17 +62,17 @@ async def handle_track_url(message: Message) -> None:
 
     with setup_download(_pending_downloads) as download_dir:
         (track_path,) = downloader.download(
-            cleaned_text,
+            message_text,
             download_path=download_dir,
         )
         await safe_reply_audio(message, track_path)
 
 
-async def handle_album_url(message: Message) -> None:
-    cleaned_text = message.text.splitlines()[0]
+async def handle_album_url(message: Message, match: Match) -> None:
+    message_text = match[0]
 
     try:
-        album = get_album_data(cleaned_text)
+        album = get_album_data(message_text)
     except Exception:
         await message.answer("Couldn't get album data :-(")
         raise
@@ -91,16 +96,25 @@ async def handle_album_url(message: Message) -> None:
             track_path.unlink(missing_ok=True)
 
 
-@dispatcher.message(F.text.regexp(KHINSIDER_URL_REGEX).as_('match'))
+@dispatcher.message(
+    F.text.regexp(KHINSIDER_URL_REGEX)
+    & F.text.regexp(
+        KHINSIDER_URL_REGEX,
+        mode=RegexpMode.FINDITER,
+    ).as_('match_iter')
+)
 @set_noticed_reaction(emoji=Emoji.EYES)
 @set_error_reaction(emoji=Emoji.SEE_NO_EVIL)
 @set_success_reaction(emoji=Emoji.THUMBS_UP)
-async def handle_khinsider_url(message: Message, match: Match) -> None:
-    if match[2]:
-        await handle_track_url(message)
-        return
+async def handle_khinsider_url(
+    message: Message, match_iter: Iterator[Match]
+) -> None:
+    for match in match_iter:
+        if match[2]:
+            await handle_track_url(message, match)
+            continue
 
-    await handle_album_url(message)
+        await handle_album_url(message, match)
 
 
 @dispatcher.message(CommandStart())
@@ -125,6 +139,9 @@ async def handle_help_command(message: Message) -> None:
         'https://downloads.khinsider.com/game-soundtracks'
         '/album/persona-3-reload-original-soundtrack-2024'
         '/2-20.%2520Battle%2520Hymn%2520of%2520the%2520Soul%2520%2528P3R%2520ver.%2529.mp3\n',
+        '\n'
+        'You can also send multiple valid urls in the same message.\n'
+        'They must be separated by spaces or newlines for this to work.',
     )
 
 
