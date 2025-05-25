@@ -138,10 +138,10 @@ async def handle_help_command(message: Message) -> None:
         '- Send track url to download specific track.\n'
         'https://downloads.khinsider.com/game-soundtracks'
         '/album/persona-3-reload-original-soundtrack-2024'
-        '/2-20.%2520Battle%2520Hymn%2520of%2520the%2520Soul%2520%2528P3R%2520ver.%2529.mp3\n',
+        '/2-20.%2520Battle%2520Hymn%2520of%2520the%2520Soul%2520%2528P3R%2520ver.%2529.mp3\n'
         '\n'
         'You can also send multiple valid urls in the same message.\n'
-        'They must be separated by spaces or newlines for this to work.',
+        'They must be separated by spaces or newlines for this to work.'
     )
 
 
