@@ -1,19 +1,23 @@
-[tool.poetry]
+[project]
 name = "khinsider_bot"
 version = "0.2.1"
 description = "Telegram bot to download soundtracks"
-authors = ["NovaHFly <mugiviska@gmail.com>"]
-license = "MIT"
+authors = [{ name = "NovaHFly", email = "mugiviska@gmail.com" }]
+requires-python = "~=3.12"
 readme = "README.md"
+license = "MIT"
+dependencies = [
+    "khinsider-downloader",
+    "starlette>=0.46.2,<0.47",
+    "uvicorn>=0.34.2,<0.35",
+    "aiogram>=3.20.0.post0,<4",
+]
 
-[tool.poetry.dependencies]
-python = "^3.12"
+[tool.uv]
+
+[tool.uv.sources]
 khinsider-downloader = { git = "https://github.com/NovaHFly/khinsider_downloader" }
-starlette = "^0.46.2"
-uvicorn = "^0.34.2"
-aiogram = "^3.20.0.post0"
-
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
