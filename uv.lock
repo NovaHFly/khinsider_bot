@@ -281,7 +281,7 @@ wheels = [
 
 [[package]]
 name = "khinsider-bot"
-version = "0.2.1"
+version = "0.2.2"
 source = { editable = "." }
 dependencies = [
     { name = "aiogram" },
@@ -293,15 +293,15 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "aiogram", specifier = ">=3.20.0.post0,<4" },
-    { name = "khinsider-downloader", git = "https://github.com/NovaHFly/khinsider_downloader?tag=v0.1.7" },
+    { name = "khinsider-downloader", git = "https://github.com/NovaHFly/khinsider_downloader?rev=v0.2.1" },
     { name = "starlette", specifier = ">=0.46.2,<0.47" },
     { name = "uvicorn", specifier = ">=0.34.2,<0.35" },
 ]
 
 [[package]]
 name = "khinsider-downloader"
-version = "0.1.7"
-source = { git = "https://github.com/NovaHFly/khinsider_downloader?tag=v0.1.7#f954655e355da27bbd904a7a84b2bdea85b17e96" }
+version = "0.2.1"
+source = { git = "https://github.com/NovaHFly/khinsider_downloader?rev=v0.2.1#c174b2f99a8262319e0b80d02fbf90d70bfc7ade" }
 dependencies = [
     { name = "beautifulsoup4" },
     { name = "httpx" },

@@ -11,7 +11,7 @@ from aiogram.enums import ChatAction, ParseMode
 from aiogram.exceptions import TelegramNetworkError
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
-from khinsider import get_album_data, get_track_data, KHINSIDER_URL_REGEX
+from khinsider import get_album, get_track, KHINSIDER_URL_REGEX
 from magic_filter import RegexpMode
 
 from .core import downloader
@@ -51,7 +51,7 @@ async def handle_track_url(message: Message, match: Match) -> None:
     message_text = match[0]
 
     try:
-        track_url = get_track_data(message_text).mp3_url
+        track_url = get_track(message_text).mp3_url
 
     except Exception:
         await message.answer("Couldn't get track :-(")
@@ -72,7 +72,7 @@ async def handle_album_url(message: Message, match: Match) -> None:
     message_text = match[0]
 
     try:
-        album = get_album_data(message_text)
+        album = get_album(message_text)
     except Exception:
         await message.answer("Couldn't get album data :-(")
         raise
