@@ -6,7 +6,7 @@ from aiogram.types import Message, ReactionTypeEmoji
 from .enums import Emoji
 
 
-def set_noticed_reaction(
+def react_before(
     emoji: Emoji = Emoji.EYES,
 ) -> Callable[[Awaitable], Awaitable]:
     """Set reaction when bot has noticed the message."""
@@ -22,7 +22,7 @@ def set_noticed_reaction(
     return decorator
 
 
-def set_success_reaction(
+def react_after(
     emoji: Emoji = Emoji.THUMBS_UP,
 ) -> Callable[[Awaitable], Awaitable]:
     """Set reaction when bot has successfully finished the task."""
@@ -38,7 +38,7 @@ def set_success_reaction(
     return decorator
 
 
-def set_error_reaction(
+def react_on_error(
     emoji: Emoji = Emoji.SEE_NO_EVIL,
 ) -> Callable[[Awaitable], Awaitable]:
     """Set reaction when task was aborted due to an error."""

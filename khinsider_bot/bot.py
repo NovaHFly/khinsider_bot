@@ -30,9 +30,9 @@ from magic_filter import RegexpMode
 from .constants import ROOT_DOWNLOADS_PATH
 from .core import downloader
 from .decorators import (
-    set_error_reaction,
-    set_noticed_reaction,
-    set_success_reaction,
+    react_after,
+    react_before,
+    react_on_error,
 )
 from .enums import Emoji
 
@@ -152,9 +152,9 @@ async def handle_download_album_button(callback_query: CallbackQuery) -> None:
         mode=RegexpMode.FINDITER,
     ).as_('match_iter')
 )
-@set_noticed_reaction(emoji=Emoji.EYES)
-@set_error_reaction(emoji=Emoji.SEE_NO_EVIL)
-@set_success_reaction(emoji=Emoji.THUMBS_UP)
+@react_before(emoji=Emoji.EYES)
+@react_on_error(emoji=Emoji.SEE_NO_EVIL)
+@react_after(emoji=Emoji.THUMBS_UP)
 async def handle_khinsider_url(
     message: Message, match_iter: Iterator[Match]
 ) -> None:
