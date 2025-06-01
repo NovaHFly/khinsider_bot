@@ -13,8 +13,6 @@ from aiogram.exceptions import TelegramNetworkError
 from aiogram.filters import Command, CommandStart
 from aiogram.types import (
     CallbackQuery,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
     Message,
     ReactionTypeEmoji,
     URLInputFile,
@@ -27,7 +25,6 @@ from khinsider import (
 )
 from magic_filter import RegexpMode
 
-from .constants import ROOT_DOWNLOADS_PATH
 from .core import downloader
 from .decorators import (
     react_after,
@@ -86,11 +83,11 @@ async def handle_album_url(message: Message, match: Match) -> None:
 
     md5_hash = md5(album.slug.encode()).hexdigest()
 
-    with (ROOT_DOWNLOADS_PATH / md5_hash).open('w') as f:
-        f.write(album.slug)
+    _pending_downloads[md5_hash] = album.slug
 
     if album.thumbnail_urls:
         await message.reply_photo(URLInputFile(album.thumbnail_urls[0]))
+
     await message.reply(
         text=get_album_info(album),
         reply_markup=get_album_keyboard(md5_hash),
@@ -100,38 +97,29 @@ async def handle_album_url(message: Message, match: Match) -> None:
 @dispatcher.callback_query(F.data.startswith('download_album://'))
 async def handle_download_album_button(callback_query: CallbackQuery) -> None:
     message = callback_query.message
+
     await message.edit_reply_markup(reply_markup=None)
 
     *_, md5_hash = callback_query.data.partition('://')
 
-    slug_file_path = ROOT_DOWNLOADS_PATH / md5_hash
-    if not slug_file_path.exists():
-        await callback_query.answer(
-            'Download unavailable! Please, resend album url!'
-        )
-        await message.react(
-            reaction=[ReactionTypeEmoji(emoji=Emoji.THUMBS_DOWN)]
-        )
+    try:
+        album_slug = _pending_downloads.pop(md5_hash)
+    except KeyError:
+        await callback_query.answer('Download not available. Resend album url')
         return
 
-    await message.react(reaction=[ReactionTypeEmoji(emoji=Emoji.EYES)])
-
-    with slug_file_path.open() as f:
-        album_slug = f.read().strip()
-    slug_file_path.unlink(missing_ok=True)
-
     await callback_query.answer()
+    await message.react([ReactionTypeEmoji(emoji=Emoji.EYES)])
 
-    album = get_album(
-        f'{KHINSIDER_BASE_URL}/game-soundtracks/album/{album_slug}'
-    )
+    album_url = f'{KHINSIDER_BASE_URL}/game-soundtracks/album/{album_slug}'
+    album = get_album(album_url)
 
     for track in downloader.fetch_tracks(album.track_urls):
         if await safe_reply_audio(message, track.mp3_url):
             continue
         await message.answer(f'Error for track {track.mp3_url}')
 
-    await message.react(reaction=[ReactionTypeEmoji(emoji=Emoji.THUMBS_UP)])
+    await message.react([ReactionTypeEmoji(emoji=Emoji.THUMBS_UP)])
 
 
 @dispatcher.message(
@@ -181,3 +169,6 @@ async def handle_help_command(message: Message) -> None:
         'You can also send multiple valid urls in the same message.\n'
         'They must be separated by spaces or newlines for this to work.'
     )
+
+
+_pending_downloads = {}
