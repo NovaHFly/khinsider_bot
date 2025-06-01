@@ -10,7 +10,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ChatAction, ParseMode
 from aiogram.exceptions import TelegramNetworkError
 from aiogram.filters import Command, CommandStart
-from aiogram.types import Message
+from aiogram.types import InputMediaPhoto, Message
 from khinsider import get_album, get_track, KHINSIDER_URL_REGEX
 from magic_filter import RegexpMode
 
@@ -77,15 +77,18 @@ async def handle_album_url(message: Message, match: Match) -> None:
         await message.answer("Couldn't get album data :-(")
         raise
 
-    await message.answer_photo(
-        album.thumbnail_urls[0],
-        caption=(
-            f'{album.name}\n'
-            f'Year: {album.year}\n'
-            f'Type: {album.type}\n'
-            f'Track count: {album.track_count}'
-        ),
+    media = [
+        InputMediaPhoto(media=thumbnail_url)
+        for thumbnail_url in album.thumbnail_urls[:10]
+    ]
+    media[-1].caption = (
+        f'{album.name}\n'
+        f'Year: {album.year}\n'
+        f'Type: {album.type}\n'
+        f'Track count: {album.track_count}'
     )
+    await message.answer_media_group(media)
+
     with setup_download(_pending_downloads) as download_dir:
         for track in downloader.fetch_tracks(album.track_urls):
             if await safe_reply_audio(message, track.mp3_url):
