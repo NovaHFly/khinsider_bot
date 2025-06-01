@@ -35,6 +35,7 @@ from .decorators import (
     react_on_error,
 )
 from .enums import Emoji
+from .util import get_album_info, get_album_keyboard
 
 logger = getLogger('khinsider_bot')
 
@@ -91,20 +92,8 @@ async def handle_album_url(message: Message, match: Match) -> None:
     if album.thumbnail_urls:
         await message.reply_photo(URLInputFile(album.thumbnail_urls[0]))
     await message.reply(
-        f'{album.name}\n'
-        f'Year: {album.year}\n'
-        f'Type: {album.type}\n'
-        f'Track count: {album.track_count}',
-        reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text='Download',
-                        callback_data=f'download_album://{md5_hash}',
-                    ),
-                ],
-            ]
-        ),
+        text=get_album_info(album),
+        reply_markup=get_album_keyboard(md5_hash),
     )
 
 
