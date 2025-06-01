@@ -10,7 +10,11 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ChatAction, ParseMode
 from aiogram.exceptions import TelegramNetworkError
 from aiogram.filters import Command, CommandStart
-from aiogram.types import InputMediaPhoto, Message
+from aiogram.types import (
+    InputMediaPhoto,
+    Message,
+    URLInputFile,
+)
 from khinsider import get_album, get_track, KHINSIDER_URL_REGEX
 from magic_filter import RegexpMode
 
@@ -78,7 +82,7 @@ async def handle_album_url(message: Message, match: Match) -> None:
         raise
 
     media = [
-        InputMediaPhoto(media=thumbnail_url)
+        InputMediaPhoto(media=URLInputFile(thumbnail_url))
         for thumbnail_url in album.thumbnail_urls[:10]
     ]
     media[-1].caption = (
