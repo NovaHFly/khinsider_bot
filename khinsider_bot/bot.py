@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from hashlib import md5
 from logging import getLogger
 from os import getenv
 from pathlib import Path
@@ -11,13 +12,22 @@ from aiogram.enums import ChatAction, ParseMode
 from aiogram.exceptions import TelegramNetworkError
 from aiogram.filters import Command, CommandStart
 from aiogram.types import (
-    InputMediaPhoto,
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
     Message,
+    ReactionTypeEmoji,
     URLInputFile,
 )
-from khinsider import get_album, get_track, KHINSIDER_URL_REGEX
+from khinsider import (
+    get_album,
+    get_track,
+    KHINSIDER_BASE_URL,
+    KHINSIDER_URL_REGEX,
+)
 from magic_filter import RegexpMode
 
+from .constants import ROOT_DOWNLOADS_PATH
 from .core import downloader
 from .decorators import (
     set_error_reaction,
@@ -25,7 +35,6 @@ from .decorators import (
     set_success_reaction,
 )
 from .enums import Emoji
-from .util import setup_download
 
 logger = getLogger('khinsider_bot')
 
@@ -64,13 +73,6 @@ async def handle_track_url(message: Message, match: Match) -> None:
     if await safe_reply_audio(message, track_url):
         return
 
-    with setup_download(_pending_downloads) as download_dir:
-        (track_path,) = downloader.download(
-            message_text,
-            download_path=download_dir,
-        )
-        await safe_reply_audio(message, track_path)
-
 
 async def handle_album_url(message: Message, match: Match) -> None:
     message_text = match[0]
@@ -81,26 +83,66 @@ async def handle_album_url(message: Message, match: Match) -> None:
         await message.answer("Couldn't get album data :-(")
         raise
 
-    media = [
-        InputMediaPhoto(media=URLInputFile(thumbnail_url))
-        for thumbnail_url in album.thumbnail_urls[:10]
-    ]
-    media[-1].caption = (
+    md5_hash = md5(album.slug.encode()).hexdigest()
+
+    with (ROOT_DOWNLOADS_PATH / md5_hash).open('w') as f:
+        f.write(album.slug)
+
+    if album.thumbnail_urls:
+        await message.reply_photo(URLInputFile(album.thumbnail_urls[0]))
+    await message.reply(
         f'{album.name}\n'
         f'Year: {album.year}\n'
         f'Type: {album.type}\n'
-        f'Track count: {album.track_count}'
+        f'Track count: {album.track_count}',
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text='Download',
+                        callback_data=f'download_album://{md5_hash}',
+                    ),
+                ],
+            ]
+        ),
     )
-    await message.answer_media_group(media)
 
-    with setup_download(_pending_downloads) as download_dir:
-        for track in downloader.fetch_tracks(album.track_urls):
-            if await safe_reply_audio(message, track.mp3_url):
-                continue
 
-            (track_path,) = downloader.download(track.page_url, download_dir)
-            await safe_reply_audio(message, track_path)
-            track_path.unlink(missing_ok=True)
+@dispatcher.callback_query(F.data.startswith('download_album://'))
+async def handle_download_album_button(callback_query: CallbackQuery) -> None:
+    message = callback_query.message
+    await message.edit_reply_markup(reply_markup=None)
+
+    *_, md5_hash = callback_query.data.partition('://')
+
+    slug_file_path = ROOT_DOWNLOADS_PATH / md5_hash
+    if not slug_file_path.exists():
+        await callback_query.answer(
+            'Download unavailable! Please, resend album url!'
+        )
+        await message.react(
+            reaction=[ReactionTypeEmoji(emoji=Emoji.THUMBS_DOWN)]
+        )
+        return
+
+    await message.react(reaction=[ReactionTypeEmoji(emoji=Emoji.EYES)])
+
+    with slug_file_path.open() as f:
+        album_slug = f.read().strip()
+    slug_file_path.unlink(missing_ok=True)
+
+    await callback_query.answer()
+
+    album = get_album(
+        f'{KHINSIDER_BASE_URL}/game-soundtracks/album/{album_slug}'
+    )
+
+    for track in downloader.fetch_tracks(album.track_urls):
+        if await safe_reply_audio(message, track.mp3_url):
+            continue
+        await message.answer(f'Error for track {track.mp3_url}')
+
+    await message.react(reaction=[ReactionTypeEmoji(emoji=Emoji.THUMBS_UP)])
 
 
 @dispatcher.message(
@@ -150,6 +192,3 @@ async def handle_help_command(message: Message) -> None:
         'You can also send multiple valid urls in the same message.\n'
         'They must be separated by spaces or newlines for this to work.'
     )
-
-
-_pending_downloads = {}

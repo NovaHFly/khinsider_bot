@@ -1,6 +1,6 @@
 [project]
 name = "khinsider_bot"
-version = "0.2.2"
+version = "0.2.3"
 description = "Telegram bot to download soundtracks"
 authors = [{ name = "NovaHFly", email = "mugiviska@gmail.com" }]
 requires-python = "~=3.12"
