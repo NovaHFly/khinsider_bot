@@ -1,0 +1,49 @@
+name: Deploy workflow
+on: [workflow_dispatch, workflow_call]
+
+jobs:
+
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      
+      - name: Copy production config to server via ssh
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          source: "docker-compose.yaml"
+          target: "projects/khinsider_bot"
+
+      - name: Execute remote commands to deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          script: |
+            echo ${{ secrets.SUDO_PASSWORD }} | sudo -S cd projects/khinsider_bot
+            sudo docker compose pull
+            sudo docker compose down
+            sudo docker compose up -d --remove-orphans
+            sudo docker image prune -f
+
+  send_deploy_telegram_report:
+    runs-on: ubuntu-latest
+    
+    needs:
+      - deploy
+
+    steps:
+    - name: Send success build report
+      uses: appleboy/telegram-action@master
+      with:
+        to: ${{ secrets.TG_ID }}
+        token: ${{ secrets.TG_TOKEN }}
+        message: Bot is successfully deployed!
