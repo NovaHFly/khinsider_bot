@@ -8,8 +8,10 @@ from time import sleep
 from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ChatAction, ParseMode
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, CommandStart
 from aiogram.types import (
+    BufferedInputFile,
     CallbackQuery,
     Message,
     ReactionTypeEmoji,
@@ -30,7 +32,7 @@ from .decorators import (
     react_on_error,
 )
 from .enums import Emoji
-from .util import get_album_info, get_album_keyboard
+from .util import get_album_info, get_album_keyboard, setup_download
 
 logger = getLogger('khinsider_bot')
 
@@ -52,13 +54,17 @@ async def handle_track_url(message: Message, match: Match) -> None:
         await message.answer("Couldn't get track :-(")
         raise
 
-    try:
-        sleep(0.2)
-        await message.chat.do(ChatAction.UPLOAD_DOCUMENT)
-        sleep(1)
-        await message.answer_audio(URLInputFile(track.mp3_url))
-    except Exception as e:
-        await message.answer(f'Error for track {track.mp3_url}: {e}')
+    with setup_download(_download_dirs) as download_dir:
+        try:
+            await message.chat.do(ChatAction.UPLOAD_DOCUMENT)
+            sleep(1)
+            await message.answer_audio(track.mp3_url)
+        except TelegramBadRequest:
+            tasks = downloader.download(track.page_url, download_dir)
+            (path,) = tasks
+            await message.answer_audio(BufferedInputFile.from_file(path))
+        except Exception as e:
+            await message.answer(f'Error for track {track.mp3_url}: {e}')
 
 
 async def handle_album_url(message: Message, match: Match) -> None:
@@ -104,13 +110,17 @@ async def handle_download_album_button(callback_query: CallbackQuery) -> None:
     album = get_album(album_url)
 
     for track in downloader.fetch_tracks(album.track_urls):
-        try:
-            sleep(0.2)
-            await message.chat.do(ChatAction.UPLOAD_DOCUMENT)
-            sleep(1)
-            await message.answer_audio(URLInputFile(track.mp3_url))
-        except Exception as e:
-            await message.answer(f'Error for track {track.mp3_url}: {e}')
+        with setup_download(_download_dirs) as download_dir:
+            try:
+                await message.chat.do(ChatAction.UPLOAD_DOCUMENT)
+                sleep(1)
+                await message.answer_audio(track.mp3_url)
+            except TelegramBadRequest:
+                tasks = downloader.download(track.page_url, download_dir)
+                (path,) = tasks
+                await message.answer_audio(BufferedInputFile.from_file(path))
+            except Exception as e:
+                await message.answer(f'Error for track {track.mp3_url}: {e}')
 
     await message.react([ReactionTypeEmoji(emoji=Emoji.THUMBS_UP)])
 
@@ -165,3 +175,4 @@ async def handle_help_command(message: Message) -> None:
 
 
 _pending_downloads = {}
+_download_dirs = {}
