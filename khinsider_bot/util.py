@@ -41,13 +41,8 @@ def get_album_info(album: Album) -> str:
 
 
 def get_album_keyboard(download_hash: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text='Download',
-                    callback_data=f'download_album://{download_hash}',
-                )
-            ]
-        ]
+    download_button = InlineKeyboardButton(
+        text='Download',
+        callback_data=f'download_album://{download_hash}',
     )
+    return InlineKeyboardMarkup(inline_keyboard=[[download_button]])

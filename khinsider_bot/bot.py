@@ -2,14 +2,12 @@ from collections.abc import Iterator
 from hashlib import md5
 from logging import getLogger
 from os import getenv
-from pathlib import Path
 from re import Match
 from time import sleep
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ChatAction, ParseMode
-from aiogram.exceptions import TelegramNetworkError
 from aiogram.filters import Command, CommandStart
 from aiogram.types import (
     CallbackQuery,
@@ -44,32 +42,23 @@ bot = Bot(
 dispatcher = Dispatcher()
 
 
-async def safe_reply_audio(
-    message: Message,
-    audio_location: Path | str,
-) -> Message | None:
-    """Send audio safely, retrying on telegram network error."""
-    while True:
-        try:
-            await message.chat.do(ChatAction.UPLOAD_DOCUMENT)
-            sleep(1)
-            return await message.answer_audio(audio_location)
-        except TelegramNetworkError:
-            continue
-
-
 async def handle_track_url(message: Message, match: Match) -> None:
     message_text = match[0]
 
     try:
-        track_url = get_track(message_text).mp3_url
+        track = get_track(message_text)
 
     except Exception:
         await message.answer("Couldn't get track :-(")
         raise
 
-    if await safe_reply_audio(message, track_url):
-        return
+    try:
+        sleep(0.2)
+        await message.chat.do(ChatAction.UPLOAD_DOCUMENT)
+        sleep(1)
+        await message.answer_audio(URLInputFile(track.mp3_url))
+    except Exception as e:
+        await message.answer(f'Error for track {track.mp3_url}: {e}')
 
 
 async def handle_album_url(message: Message, match: Match) -> None:
@@ -115,9 +104,13 @@ async def handle_download_album_button(callback_query: CallbackQuery) -> None:
     album = get_album(album_url)
 
     for track in downloader.fetch_tracks(album.track_urls):
-        if await safe_reply_audio(message, track.mp3_url):
-            continue
-        await message.answer(f'Error for track {track.mp3_url}')
+        try:
+            sleep(0.2)
+            await message.chat.do(ChatAction.UPLOAD_DOCUMENT)
+            sleep(1)
+            await message.answer_audio(URLInputFile(track.mp3_url))
+        except Exception as e:
+            await message.answer(f'Error for track {track.mp3_url}: {e}')
 
     await message.react([ReactionTypeEmoji(emoji=Emoji.THUMBS_UP)])
 
