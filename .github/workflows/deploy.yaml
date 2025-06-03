@@ -28,9 +28,9 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           script: |
-            echo ${{ secrets.SUDO_PASSWORD }} | sudo -S cd projects/khinsider_bot
-            sudo docker compose pull
+            cd projects/khinsider_bot
             sudo docker compose down
+            sudo docker compose pull
             sudo docker compose up -d --remove-orphans
             sudo docker image prune -f
 
