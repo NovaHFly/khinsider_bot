@@ -444,7 +444,7 @@ requires-dist = [
 [[package]]
 name = "khinsider-downloader"
 version = "0.2.3"
-source = { git = "https://github.com/NovaHFly/khinsider_downloader?rev=v0.2.3#0961f676aa8004b0d3e5e8823d5851f4bf13a590" }
+source = { git = "https://github.com/NovaHFly/khinsider_downloader?rev=v0.2.3#8d424b21531b75204eb8fd15a158ed3e1a7a55a6" }
 dependencies = [
     { name = "beautifulsoup4" },
     { name = "cloudscraper" },

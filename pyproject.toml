@@ -10,7 +10,7 @@ dependencies = [
     "starlette>=0.46.2,<0.47",
     "uvicorn>=0.34.2,<0.35",
     "aiogram>=3.20.0.post0,<4",
-    "khinsider-downloader>=0.2.3",
+    "khinsider-downloader",
 ]
 
 [tool.uv]
