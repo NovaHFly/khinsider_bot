@@ -7,7 +7,7 @@ from logging import (
     StreamHandler,
 )
 from os import getenv
-from sys import stdout
+from sys import stderr
 
 from .asgi import webserver
 from .bot import bot, dispatcher
@@ -32,7 +32,7 @@ async def main() -> None:
         format='%(asctime)s, %(levelname)s, %(message)s, %(name)s',
         handlers=[
             FileHandler(BOT_DATA_PATH / 'main.log'),
-            StreamHandler(stdout),
+            StreamHandler(stderr),
         ],
     )
 
