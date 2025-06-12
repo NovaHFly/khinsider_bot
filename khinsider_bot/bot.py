@@ -114,7 +114,7 @@ async def handle_download_album_button(callback_query: CallbackQuery) -> None:
         raise
 
     for track_url in album.track_urls:
-        track = get_track(*track_url.rsplit('/', maxsplit=1)[:0:-1])
+        track = get_track(*track_url.rsplit('/', maxsplit=2)[:0:-1])
         with setup_download(_download_dirs) as download_dir:
             try:
                 await message.chat.do(ChatAction.UPLOAD_DOCUMENT)
