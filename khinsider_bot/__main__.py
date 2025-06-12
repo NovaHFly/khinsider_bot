@@ -1,13 +1,8 @@
+import logging
+import sys
 from argparse import ArgumentParser
 from asyncio import run
-from logging import (
-    basicConfig as setup_logging,
-    FileHandler,
-    INFO,
-    StreamHandler,
-)
 from os import getenv
-from sys import stderr
 
 from .asgi import webserver
 from .bot import bot, dispatcher
@@ -27,12 +22,13 @@ def construct_argparser() -> ArgumentParser:
 async def main() -> None:
     args = construct_argparser().parse_args()
 
-    setup_logging(
-        level=INFO,
+    logging.basicConfig(
+        level=logging.INFO,
         format='%(asctime)s, %(levelname)s, %(message)s, %(name)s',
+        force=True,
         handlers=[
-            FileHandler(BOT_DATA_PATH / 'main.log'),
-            StreamHandler(stderr),
+            logging.FileHandler(BOT_DATA_PATH / 'main.log'),
+            logging.StreamHandler(sys.stdout),
         ],
     )
 

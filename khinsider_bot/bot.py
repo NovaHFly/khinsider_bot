@@ -1,6 +1,6 @@
+import logging
 from collections.abc import Iterator
 from hashlib import md5
-from logging import getLogger
 from os import getenv
 from re import Match
 from time import sleep
@@ -33,7 +33,7 @@ from .decorators import (
 from .enums import Emoji
 from .util import get_album_info, get_album_keyboard, setup_download
 
-logger = getLogger('khinsider_bot')
+logger = logging.getLogger('khinsider_bot')
 
 bot = Bot(
     token=getenv('TELEGRAM_TOKEN'),
