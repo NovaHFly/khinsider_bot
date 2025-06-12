@@ -47,8 +47,10 @@ dispatcher = Dispatcher()
 async def handle_track_url(message: Message, match: Match) -> None:
     message_text = match[0]
 
+    _, album_slug, track_name = message_text.rsplit('/', maxsplit=2)
+
     try:
-        track = get_track(message_text)
+        track = get_track(track_name, album_slug)
 
     except Exception:
         await message.answer("Couldn't get track :-(")
@@ -71,7 +73,7 @@ async def handle_album_url(message: Message, match: Match) -> None:
     message_text = match[0]
 
     try:
-        album = get_album(message_text)
+        album = get_album(message_text.rsplit('/', maxsplit=1)[-1])
     except Exception:
         await message.answer("Couldn't get album data :-(")
         raise
