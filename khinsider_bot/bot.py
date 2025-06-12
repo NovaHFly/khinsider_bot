@@ -20,7 +20,6 @@ from aiogram.types import (
 from khinsider import (
     get_album,
     get_track,
-    KHINSIDER_BASE_URL,
     KHINSIDER_URL_REGEX,
 )
 from magic_filter import RegexpMode
@@ -108,8 +107,11 @@ async def handle_download_album_button(callback_query: CallbackQuery) -> None:
     await callback_query.answer()
     await message.react([ReactionTypeEmoji(emoji=Emoji.EYES)])
 
-    album_url = f'{KHINSIDER_BASE_URL}/game-soundtracks/album/{album_slug}'
-    album = get_album(album_url)
+    try:
+        album = get_album(album_slug)
+    except Exception:
+        message.react([ReactionTypeEmoji(emoji=Emoji.SEE_NO_EVIL)])
+        raise
 
     for track in downloader.fetch_tracks(album.track_urls):
         with setup_download(_download_dirs) as download_dir:
