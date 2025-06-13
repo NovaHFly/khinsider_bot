@@ -7,7 +7,6 @@ from os import getenv
 from .asgi import webserver
 from .bot import bot, dispatcher
 from .constants import BOT_DATA_PATH
-from .core import downloader
 
 
 def construct_argparser() -> ArgumentParser:
@@ -42,8 +41,6 @@ async def main() -> None:
         await webserver.serve()
     elif args.polling:
         await dispatcher.start_polling(bot)
-
-    downloader.shutdown()
 
 
 if __name__ == '__main__':
