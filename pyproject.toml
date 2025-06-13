@@ -16,7 +16,7 @@ dependencies = [
 [tool.uv]
 
 [tool.uv.sources]
-khinsider-downloader = { git = "https://github.com/NovaHFly/khinsider_downloader", rev = "v0.2.4.dev5" }
+khinsider-downloader = { git = "https://github.com/NovaHFly/khinsider_downloader", rev = "v0.2.4.dev6" }
 
 [build-system]
 requires = ["hatchling"]
