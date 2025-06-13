@@ -1,11 +1,19 @@
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from pathlib import Path
 from random import randint
 from shutil import rmtree
+from time import sleep
 
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from khinsider import Album
+from aiogram.enums import ChatAction
+from aiogram.exceptions import TelegramBadRequest
+from aiogram.types import (
+    BufferedInputFile,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+)
+from khinsider import Album, AudioTrack, download_track_file
 
 from .constants import ROOT_DOWNLOADS_PATH
 
@@ -46,3 +54,30 @@ def get_album_keyboard(download_hash: str) -> InlineKeyboardMarkup:
         callback_data=f'download_album://{download_hash}',
     )
     return InlineKeyboardMarkup(inline_keyboard=[[download_button]])
+
+
+async def send_audio_track(
+    message: Message,
+    track: AudioTrack,
+    download_dir: Path,
+) -> None:
+    async def _send_track(from_, raise_error: False):
+        await message.chat.do(ChatAction.UPLOAD_DOCUMENT)
+        sleep(0.5)
+        await message.answer_audio(from_)
+        sleep(0.1)
+
+    try:
+        with suppress(TelegramBadRequest):
+            await _send_track(track.mp3_url)
+            return
+        await _send_track(
+            BufferedInputFile.from_file(
+                download_track_file(
+                    track,
+                    download_dir,
+                )
+            )
+        )
+    except Exception as e:
+        await message.answer(f'Error for track {track.mp3_url}: {e}')
