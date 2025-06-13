@@ -18,6 +18,7 @@ from aiogram.types import (
     URLInputFile,
 )
 from khinsider import (
+    fetch_tracks,
     get_album,
     get_track,
     KHINSIDER_URL_REGEX,
@@ -113,9 +114,8 @@ async def handle_download_album_button(callback_query: CallbackQuery) -> None:
         message.react([ReactionTypeEmoji(emoji=Emoji.SEE_NO_EVIL)])
         raise
 
-    for track_url in album.track_urls:
-        track = get_track(*track_url.rsplit('/', maxsplit=2)[:0:-1])
-        with setup_download(_download_dirs) as download_dir:
+    with setup_download(_download_dirs) as download_dir:
+        for track in fetch_tracks(*album.track_urls):
             try:
                 await message.chat.do(ChatAction.UPLOAD_DOCUMENT)
                 sleep(1)
