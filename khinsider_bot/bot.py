@@ -18,6 +18,7 @@ from aiogram.types import (
     URLInputFile,
 )
 from khinsider import (
+    download_track_file,
     fetch_tracks,
     get_album,
     get_track,
@@ -25,7 +26,6 @@ from khinsider import (
 )
 from magic_filter import RegexpMode
 
-from .core import downloader
 from .decorators import (
     react_after,
     react_before,
@@ -62,8 +62,7 @@ async def handle_track_url(message: Message, match: Match) -> None:
             sleep(1)
             await message.answer_audio(track.mp3_url)
         except TelegramBadRequest:
-            tasks = downloader.download(track.page_url, download_dir)
-            (path,) = tasks
+            path = download_track_file(track, download_dir)
             await message.answer_audio(BufferedInputFile.from_file(path))
         except Exception as e:
             await message.answer(f'Error for track {track.mp3_url}: {e}')
@@ -121,8 +120,7 @@ async def handle_download_album_button(callback_query: CallbackQuery) -> None:
                 sleep(1)
                 await message.answer_audio(track.mp3_url)
             except TelegramBadRequest:
-                tasks = downloader.download(track.page_url, download_dir)
-                (path,) = tasks
+                path = download_track_file(track, download_dir)
                 await message.answer_audio(BufferedInputFile.from_file(path))
             except Exception as e:
                 await message.answer(f'Error for track {track.mp3_url}: {e}')
