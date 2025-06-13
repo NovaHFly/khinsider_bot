@@ -16,7 +16,7 @@ jobs:
       - name: Parse version
         id: parse_version
         run: |
-          echo "project_version=`grep -oP 'version = "\K([0-9]+\.[0-9]+\.[0-9]+)' pyproject.toml`" >> "$GITHUB_OUTPUT"
+          echo "project_version=`grep -oP 'version = "\K([0-9]+\.[0-9]+\.[0-9]+\.[a-z0-9]+)' pyproject.toml`" >> "$GITHUB_OUTPUT"
 
   build_and_push_image_to_dockerhub:
     runs-on: ubuntu-latest
