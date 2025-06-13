@@ -50,7 +50,7 @@ def react_on_error(
                 await handler(message, *args, **kwargs)
             except Exception:
                 await message.react([ReactionTypeEmoji(emoji=emoji)])
-                raise
+                return
 
         return handler_wrapper
 
