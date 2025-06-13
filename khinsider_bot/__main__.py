@@ -4,9 +4,9 @@ from argparse import ArgumentParser
 from asyncio import run
 from os import getenv
 
-from .asgi import webserver
-from .bot import bot, dispatcher
-from .constants import BOT_DATA_PATH
+from khinsider_bot.asgi import webserver
+from khinsider_bot.bot import bot, dispatcher
+from khinsider_bot.constants import BOT_DATA_PATH
 
 
 def construct_argparser() -> ArgumentParser:
