@@ -5,7 +5,9 @@ jobs:
 
     build:
         uses: novahfly/khinsider_bot/.github/workflows/build.yaml@main
+        secrets: inherit
     
     deploy:
         needs: build
         uses: novahfly/khinsider_bot/.github/workflows/deploy.yaml@main
+        secrets: inherit
