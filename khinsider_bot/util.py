@@ -61,7 +61,7 @@ async def send_audio_track(
     track: AudioTrack,
     download_dir: Path,
 ) -> None:
-    async def _send_track(from_, raise_error: False):
+    async def _send_track(from_):
         await message.chat.do(ChatAction.UPLOAD_DOCUMENT)
         sleep(0.5)
         await message.answer_audio(from_)
