@@ -48,12 +48,34 @@ def setup_download(existing_downloads: dict | None = None) -> Iterator[Path]:
         existing_downloads.pop(download_id, None)
 
 
+def batch_collection(
+    collection: Collection,
+    batch_size: int = 5,
+) -> list[list]:
+    return [
+        collection[batch_size * n : batch_size * (n + 1)]
+        for n in range(len(collection) // batch_size + 1)
+    ]
+
+
 def get_album_info(album: Album) -> str:
     return (
         f'{album.name}\n'
         f'Year: {album.year}\n'
         f'Type: {album.type}\n'
         f'Track count: {album.track_count}'
+    )
+
+
+def format_search_results(
+    search_results: list[AlbumShort],
+    page_num: int = 0,
+) -> str:
+    return ''.join(
+        f'{html.bold(str(i))}. {album.name}\n\n'
+        for i, album in enumerate(
+            search_results, start=(1 + LIST_PAGE_LENGTH * page_num)
+        )
     )
 
 
@@ -78,6 +100,66 @@ async def send_album_data(
     await message.reply(
         text=get_album_info(album),
         reply_markup=get_album_keyboard(md5_hash),
+    )
+
+
+async def send_audio_track(
+    message: Message,
+    track: AudioTrack,
+    download_dir: Path,
+) -> None:
+    async def _send_track(from_):
+        await message.chat.do(ChatAction.UPLOAD_DOCUMENT)
+        sleep(0.5)
+        await message.answer_audio(from_)
+        sleep(0.1)
+
+    try:
+        with suppress(TelegramBadRequest):
+            await _send_track(track.mp3_url)
+            return
+        await _send_track(
+            BufferedInputFile.from_file(
+                download_track_file(
+                    track,
+                    download_dir,
+                )
+            )
+        )
+    except Exception as e:
+        await message.answer(f'Error for track {track.mp3_url}: {e}')
+
+
+def cache_album_list(
+    album_list: list[AlbumShort],
+    cached_lists: dict[str, list],
+) -> str:
+    list_md5 = md5(str(album_list).encode()).hexdigest()
+    cached_lists[list_md5] = album_list
+
+    return list_md5
+
+
+async def send_album_list(
+    message: Message,
+    list_page: list[AlbumShort],
+    list_md5: str,
+    current_page_num: int,
+    last_page_num: int,
+) -> None:
+    keyboard = get_list_select_keyboard(
+        list_md5,
+        current_page_num,
+        last_page_num,
+        len(list_page),
+    )
+
+    await message.answer(
+        format_search_results(
+            list_page,
+            current_page_num,
+        ),
+        reply_markup=keyboard,
     )
 
 
@@ -144,52 +226,3 @@ def get_list_select_keyboard(
             page_keys,
         ]
     )
-
-
-async def send_audio_track(
-    message: Message,
-    track: AudioTrack,
-    download_dir: Path,
-) -> None:
-    async def _send_track(from_):
-        await message.chat.do(ChatAction.UPLOAD_DOCUMENT)
-        sleep(0.5)
-        await message.answer_audio(from_)
-        sleep(0.1)
-
-    try:
-        with suppress(TelegramBadRequest):
-            await _send_track(track.mp3_url)
-            return
-        await _send_track(
-            BufferedInputFile.from_file(
-                download_track_file(
-                    track,
-                    download_dir,
-                )
-            )
-        )
-    except Exception as e:
-        await message.answer(f'Error for track {track.mp3_url}: {e}')
-
-
-def format_search_results(
-    search_results: list[AlbumShort],
-    page_num: int = 0,
-) -> str:
-    return ''.join(
-        f'{html.bold(str(i))}. {album.name}\n\n'
-        for i, album in enumerate(
-            search_results, start=(1 + LIST_PAGE_LENGTH * page_num)
-        )
-    )
-
-
-def batch_collection(
-    collection: Collection,
-    batch_size: int = 5,
-) -> list[list]:
-    return [
-        collection[batch_size * n : batch_size * (n + 1)]
-        for n in range(len(collection) // batch_size + 1)
-    ]

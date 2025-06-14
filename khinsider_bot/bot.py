@@ -1,6 +1,5 @@
 import logging
 from collections.abc import Iterator
-from hashlib import md5
 from os import getenv
 from re import Match
 
@@ -16,6 +15,7 @@ from aiogram.types import (
 from khinsider import (
     fetch_tracks,
     get_album,
+    get_publisher_albums,
     get_track,
     KHINSIDER_URL_REGEX,
     parse_khinsider_url,
@@ -32,9 +32,11 @@ from .decorators import (
 )
 from .enums import Emoji
 from .util import (
+    cache_album_list,
     format_search_results,
     get_list_select_keyboard,
     send_album_data,
+    send_album_list,
     send_audio_track,
     setup_download,
 )
@@ -198,21 +200,42 @@ async def handle_search_command(message: Message) -> None:
         await message.answer('I found nothing :(')
         return
 
-    list_md5 = md5(str(search_results).encode()).hexdigest()
-    _cached_lists[list_md5] = search_results
+    list_md5 = cache_album_list(search_results, _cached_lists)
 
-    keyboard = get_list_select_keyboard(
+    await send_album_list(
+        message,
+        search_results[0:LIST_PAGE_LENGTH],
         list_md5,
         current_page_num=0,
         last_page_num=len(search_results) // LIST_PAGE_LENGTH,
     )
 
-    await message.answer(
-        format_search_results(
-            search_results[0:LIST_PAGE_LENGTH],
-            page_num=0,
-        ),
-        reply_markup=keyboard,
+
+@dispatcher.message(Command('publisher'))
+async def handle_publisher_command(message: Message) -> None:
+    query = message.text.removeprefix('/publisher').strip()
+
+    if not query:
+        await message.answer('Publisher name is required!')
+        return
+
+    search_results = get_publisher_albums(query)
+
+    if not search_results:
+        await message.answer(
+            'Publisher has no albums or name is incorrect!\n'
+            'Note: to find something publisher name must be exact match!'
+        )
+        return
+
+    list_md5 = cache_album_list(search_results, _cached_lists)
+
+    await send_album_list(
+        message,
+        search_results[0:LIST_PAGE_LENGTH],
+        list_md5,
+        current_page_num=0,
+        last_page_num=len(search_results) // LIST_PAGE_LENGTH,
     )
 
 
