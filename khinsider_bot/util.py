@@ -1,10 +1,12 @@
-from collections.abc import Iterator
+from collections.abc import Collection, Iterator
 from contextlib import contextmanager, suppress
+from hashlib import md5
 from pathlib import Path
 from random import randint
 from shutil import rmtree
 from time import sleep
 
+from aiogram import html
 from aiogram.enums import ChatAction
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import (
@@ -12,10 +14,17 @@ from aiogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     Message,
+    URLInputFile,
 )
-from khinsider import Album, AudioTrack, download_track_file
+from khinsider import (
+    Album,
+    AlbumShort,
+    AudioTrack,
+    download_track_file,
+    get_album,
+)
 
-from .constants import ROOT_DOWNLOADS_PATH
+from .constants import LIST_PAGE_LENGTH, ROOT_DOWNLOADS_PATH
 
 
 @contextmanager
@@ -48,12 +57,93 @@ def get_album_info(album: Album) -> str:
     )
 
 
+async def send_album_data(
+    message: Message,
+    album_slug: str,
+    pending_downloads: dict,
+) -> None:
+    try:
+        album = get_album(album_slug)
+    except Exception:
+        await message.answer("Couldn't get album data :-(")
+        raise
+
+    md5_hash = md5(album.slug.encode()).hexdigest()
+
+    pending_downloads[md5_hash] = album.slug
+
+    if album.thumbnail_urls:
+        await message.reply_photo(URLInputFile(album.thumbnail_urls[0]))
+
+    await message.reply(
+        text=get_album_info(album),
+        reply_markup=get_album_keyboard(md5_hash),
+    )
+
+
 def get_album_keyboard(download_hash: str) -> InlineKeyboardMarkup:
     download_button = InlineKeyboardButton(
         text='Download',
         callback_data=f'download_album://{download_hash}',
     )
     return InlineKeyboardMarkup(inline_keyboard=[[download_button]])
+
+
+def get_list_select_keyboard(
+    list_md5: str,
+    current_page_num: int,
+    last_page_num: int,
+    page_len: int = LIST_PAGE_LENGTH,
+):
+    page_shift = LIST_PAGE_LENGTH * current_page_num
+    select_keys = batch_collection(
+        [
+            InlineKeyboardButton(
+                text=f'{i + page_shift + 1}',
+                callback_data=(f'select://{list_md5};{i + page_shift}'),
+            )
+            for i in range(page_len)
+        ],
+        batch_size=5,
+    )
+
+    page_keys = [
+        InlineKeyboardButton(
+            text=f'[{current_page_num + 1}]',
+            callback_data='dummy',
+        )
+    ]
+
+    if current_page_num != 0:
+        page_keys = [
+            InlineKeyboardButton(
+                text='<<',
+                callback_data=f'page://{list_md5};0',
+            ),
+            InlineKeyboardButton(
+                text='<',
+                callback_data=f'page://{list_md5};{current_page_num - 1}',
+            ),
+        ] + page_keys
+
+    if current_page_num != last_page_num:
+        page_keys += [
+            InlineKeyboardButton(
+                text='>',
+                callback_data=f'page://{list_md5};{current_page_num + 1}',
+            ),
+            InlineKeyboardButton(
+                text='>>',
+                callback_data=f'page://{list_md5};{last_page_num}',
+            ),
+        ]
+
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            *select_keys,
+            page_keys,
+        ]
+    )
 
 
 async def send_audio_track(
@@ -81,3 +171,25 @@ async def send_audio_track(
         )
     except Exception as e:
         await message.answer(f'Error for track {track.mp3_url}: {e}')
+
+
+def format_search_results(
+    search_results: list[AlbumShort],
+    page_num: int = 0,
+) -> str:
+    return ''.join(
+        f'{html.bold(str(i))}. {album.name}\n\n'
+        for i, album in enumerate(
+            search_results, start=(1 + LIST_PAGE_LENGTH * page_num)
+        )
+    )
+
+
+def batch_collection(
+    collection: Collection,
+    batch_size: int = 5,
+) -> list[list]:
+    return [
+        collection[batch_size * n : batch_size * (n + 1)]
+        for n in range(len(collection) // batch_size + 1)
+    ]

@@ -12,7 +12,6 @@ from aiogram.types import (
     CallbackQuery,
     Message,
     ReactionTypeEmoji,
-    URLInputFile,
 )
 from khinsider import (
     fetch_tracks,
@@ -20,9 +19,12 @@ from khinsider import (
     get_track,
     KHINSIDER_URL_REGEX,
     parse_khinsider_url,
+    search_albums,
 )
+from khinsider.enums import AlbumTypes
 from magic_filter import RegexpMode
 
+from .constants import LIST_PAGE_LENGTH
 from .decorators import (
     react_after,
     react_before,
@@ -30,8 +32,9 @@ from .decorators import (
 )
 from .enums import Emoji
 from .util import (
-    get_album_info,
-    get_album_keyboard,
+    format_search_results,
+    get_list_select_keyboard,
+    send_album_data,
     send_audio_track,
     setup_download,
 )
@@ -65,22 +68,12 @@ async def handle_track_url(message: Message, match: Match) -> None:
 async def handle_album_url(message: Message, match: Match) -> None:
     message_text = match[0]
 
-    try:
-        album = get_album(message_text.rsplit('/', maxsplit=1)[-1])
-    except Exception:
-        await message.answer("Couldn't get album data :-(")
-        raise
+    album_slug = message_text.rsplit('/', maxsplit=1)[-1]
 
-    md5_hash = md5(album.slug.encode()).hexdigest()
-
-    _pending_downloads[md5_hash] = album.slug
-
-    if album.thumbnail_urls:
-        await message.reply_photo(URLInputFile(album.thumbnail_urls[0]))
-
-    await message.reply(
-        text=get_album_info(album),
-        reply_markup=get_album_keyboard(md5_hash),
+    await send_album_data(
+        message,
+        album_slug,
+        _pending_downloads,
     )
 
 
@@ -163,5 +156,113 @@ async def handle_help_command(message: Message) -> None:
     )
 
 
+@dispatcher.message(Command('search'))
+async def handle_search_command(message: Message) -> None:
+    query = message.text.removeprefix('/search').strip()
+
+    if not query:
+        await message.answer('Search query is empty')
+        return
+
+    if query.startswith('#'):
+        album_type_arg, query = query.split(maxsplit=1)
+
+        album_type = {
+            '#ost': AlbumTypes.SOUNDTRACKS,
+            '#gr': AlbumTypes.GAMERIPS,
+            '#arr': AlbumTypes.ARRANGEMENTS,
+            '#rmx': AlbumTypes.REMIXES,
+            '#com': AlbumTypes.COMPILATIONS,
+            '#sgl': AlbumTypes.SINGLES,
+            '#ins': AlbumTypes.INSPIRED_BY,
+        }.get(album_type_arg, AlbumTypes.EMPTY)
+    else:
+        album_type = AlbumTypes.EMPTY
+
+    search_results = search_albums(query, album_type=album_type)
+
+    list_md5 = md5(str(search_results).encode()).hexdigest()
+    _cached_lists[list_md5] = search_results
+
+    keyboard = get_list_select_keyboard(
+        list_md5,
+        current_page_num=0,
+        last_page_num=len(search_results) // LIST_PAGE_LENGTH,
+    )
+
+    await message.answer(
+        format_search_results(
+            search_results[0:LIST_PAGE_LENGTH],
+            page_num=0,
+        ),
+        reply_markup=keyboard,
+    )
+
+
+@dispatcher.callback_query(F.data.startswith('page://'))
+async def handle_switch_page(callback_query: CallbackQuery) -> None:
+    message = callback_query.message
+
+    list_md5, page_n = callback_query.data.removeprefix('page://').split(';')
+    page_n = int(page_n)
+
+    if not (album_list := _cached_lists.get(list_md5)):
+        await callback_query.answer(
+            'Search results invalid! Please, re-send search query.'
+        )
+        await message.react([ReactionTypeEmoji(emoji=Emoji.SEE_NO_EVIL)])
+        return
+
+    album_slice = album_list[
+        LIST_PAGE_LENGTH * page_n : LIST_PAGE_LENGTH * (page_n + 1)
+    ]
+
+    await callback_query.answer()
+    await message.edit_text(
+        format_search_results(
+            album_slice,
+            page_num=page_n,
+        ),
+        reply_markup=get_list_select_keyboard(
+            list_md5,
+            current_page_num=page_n,
+            last_page_num=len(album_list) // LIST_PAGE_LENGTH,
+            page_len=len(album_slice),
+        ),
+    )
+
+
+@dispatcher.callback_query(F.data.startswith('select://'))
+async def handle_select_album(callback_query: CallbackQuery) -> None:
+    message = callback_query.message
+
+    list_md5, album_n = callback_query.data.removeprefix(
+        'select://',
+    ).split(';')
+    album_n = int(album_n)
+
+    if not (album_list := _cached_lists.get(list_md5)):
+        await callback_query.answer(
+            'Search results invalid! Please, re-send search query.'
+        )
+        await message.react([ReactionTypeEmoji(emoji=Emoji.SEE_NO_EVIL)])
+        return
+
+    album_slug = album_list[album_n].slug
+
+    await callback_query.answer(album_slug)
+    await send_album_data(
+        message,
+        album_slug,
+        _pending_downloads,
+    )
+
+
+@dispatcher.callback_query(F.data == ('dummy'))
+async def handle_dummy_data(callback_query: CallbackQuery) -> None:
+    await callback_query.answer()
+
+
 _pending_downloads = {}
 _download_dirs = {}
+_cached_lists = {}

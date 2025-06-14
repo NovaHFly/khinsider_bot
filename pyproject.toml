@@ -1,6 +1,6 @@
 [project]
 name = "khinsider_bot"
-version = "0.2.4.dev1"
+version = "0.2.4.dev2"
 description = "Telegram bot to download soundtracks"
 authors = [{ name = "NovaHFly", email = "mugiviska@gmail.com" }]
 requires-python = "~=3.12"
@@ -16,7 +16,7 @@ dependencies = [
 [tool.uv]
 
 [tool.uv.sources]
-khinsider-downloader = { git = "https://github.com/NovaHFly/khinsider_downloader", rev = "v0.2.4" }
+khinsider-downloader = { git = "https://github.com/NovaHFly/khinsider_downloader", rev = "v0.2.5.dev2" }
 
 [build-system]
 requires = ["hatchling"]
