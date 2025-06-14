@@ -58,7 +58,7 @@ def batch_collection(
     ]
 
 
-def get_album_info(album: Album) -> str:
+def format_album_info(album: Album) -> str:
     return (
         f'{album.name}\n'
         f'Year: {album.year}\n'
@@ -98,7 +98,7 @@ async def send_album_data(
         await message.reply_photo(URLInputFile(album.thumbnail_urls[0]))
 
     await message.reply(
-        text=get_album_info(album),
+        text=format_album_info(album),
         reply_markup=get_album_keyboard(md5_hash),
     )
 
