@@ -194,6 +194,10 @@ async def handle_search_command(message: Message) -> None:
 
     search_results = search_albums(query, album_type=album_type)
 
+    if not search_results:
+        await message.answer('I found nothing :(')
+        return
+
     list_md5 = md5(str(search_results).encode()).hexdigest()
     _cached_lists[list_md5] = search_results
 
