@@ -152,7 +152,20 @@ async def handle_help_command(message: Message) -> None:
         '/2-20.%2520Battle%2520Hymn%2520of%2520the%2520Soul%2520%2528P3R%2520ver.%2529.mp3\n'
         '\n'
         'You can also send multiple valid urls in the same message.\n'
-        'They must be separated by spaces or newlines for this to work.'
+        'They must be separated by spaces or newlines for this to work.\n'
+        '\n'
+        'To search for albums type /search [query] \n'
+        'You can search for particular type of album by '
+        'prefixing query with #[album_type] .\n'
+        'e.g. "/search #gr touhou" will search for all touhou gamerips.\n'
+        'Available album types:\n'
+        '- #ost - Official soundtracks\n'
+        '- #gr - Sound and music gamerips\n'
+        '- #arr - Music arrangements\n'
+        '- #rmx - Remixes\n'
+        '- #com - Compilation albums\n'
+        '- #sgl - Singles\n'
+        '- #ins - Inspired albums [Inspired by]\n'
     )
 
 
