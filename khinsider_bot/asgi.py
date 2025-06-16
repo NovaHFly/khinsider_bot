@@ -19,10 +19,6 @@ async def telegram(request: Request) -> Response:
         bot=bot,
         update=await request.json(),
     )
-    # await dispatcher.feed_webhook_update(
-    #     bot=bot,
-    #     update=await request.json(),
-    # )
     return Response(background=task)
 
 
