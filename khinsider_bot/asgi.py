@@ -1,3 +1,5 @@
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from os import getenv
 
 from starlette.applications import Starlette
@@ -8,12 +10,20 @@ from uvicorn import Config, Server
 
 from .bot import bot, dispatcher
 
+executor = ThreadPoolExecutor(max_workers=5)
+
 
 async def telegram(request: Request) -> Response:
-    await dispatcher.feed_webhook_update(
+    asyncio.get_event_loop().run_in_executor(
+        executor,
+        dispatcher.feed_webhook_update,
         bot=bot,
         update=await request.json(),
     )
+    # await dispatcher.feed_webhook_update(
+    #     bot=bot,
+    #     update=await request.json(),
+    # )
     return Response()
 
 
