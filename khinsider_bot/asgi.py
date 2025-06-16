@@ -1,8 +1,8 @@
-import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from os import getenv
 
 from starlette.applications import Starlette
+from starlette.background import BackgroundTask
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response
 from starlette.routing import Route
@@ -14,8 +14,7 @@ executor = ThreadPoolExecutor(max_workers=5)
 
 
 async def telegram(request: Request) -> Response:
-    asyncio.get_event_loop().run_in_executor(
-        executor,
+    task = BackgroundTask(
         dispatcher.feed_webhook_update,
         bot=bot,
         update=await request.json(),
@@ -24,7 +23,7 @@ async def telegram(request: Request) -> Response:
     #     bot=bot,
     #     update=await request.json(),
     # )
-    return Response()
+    return Response(background=task)
 
 
 async def health(_: Request) -> PlainTextResponse:
