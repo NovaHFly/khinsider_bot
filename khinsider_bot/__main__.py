@@ -35,10 +35,10 @@ async def main() -> None:
         await bot.set_webhook(
             url=getenv('WEBHOOK_URL'),
             secret_token=getenv('WEBHOOK_TOKEN'),
-            drop_pending_updates=True,
         )
 
         await webserver.serve()
+        await bot.delete_webhook(drop_pending_updates=True)
     elif args.polling:
         await dispatcher.start_polling(bot)
 
