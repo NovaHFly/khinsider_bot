@@ -23,7 +23,7 @@ async def main() -> None:
 
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s, %(levelname)s, %(message)s, %(name)s',
+        format='%(asctime)s, %(levelname)s, [%(func)s] %(message)s, %(name)s',
         force=True,
         handlers=[
             logging.FileHandler(BOT_DATA_PATH / 'main.log'),
