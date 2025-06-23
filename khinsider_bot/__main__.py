@@ -10,7 +10,7 @@ from khinsider_bot.asgi import webserver
 from khinsider_bot.bot import bot, dispatcher
 from khinsider_bot.constants import BOT_DATA_PATH
 
-cache_manager = get_cache_manager('khinsider')
+cache_manager = get_cache_manager('khinsider', run_garbage_collector=False)
 
 
 def construct_argparser() -> ArgumentParser:
@@ -34,18 +34,20 @@ async def main() -> None:
             logging.StreamHandler(sys.stdout),
         ],
     )
-    if args.webhook:
-        await bot.set_webhook(
-            url=getenv('WEBHOOK_URL'),
-            secret_token=getenv('WEBHOOK_TOKEN'),
-        )
+    try:
+        cache_manager.start_garbage_collector()
+        if args.webhook:
+            await bot.set_webhook(
+                url=getenv('WEBHOOK_URL'),
+                secret_token=getenv('WEBHOOK_TOKEN'),
+            )
 
-        await webserver.serve()
-        await bot.delete_webhook(drop_pending_updates=True)
-    elif args.polling:
-        await dispatcher.start_polling(bot)
-
-    cache_manager.stop_garbage_collector()
+            await webserver.serve()
+            await bot.delete_webhook(drop_pending_updates=True)
+        elif args.polling:
+            await dispatcher.start_polling(bot)
+    finally:
+        cache_manager.stop_garbage_collector()
 
 
 if __name__ == '__main__':
