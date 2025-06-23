@@ -22,9 +22,10 @@ from khinsider import (
     search_albums,
 )
 from khinsider.enums import AlbumTypes
+from khinsider.files import setup_download
 from magic_filter import RegexpMode
 
-from .constants import LIST_PAGE_LENGTH
+from .constants import LIST_PAGE_LENGTH, ROOT_DOWNLOADS_PATH
 from .decorators import (
     react_after,
     react_before,
@@ -38,7 +39,6 @@ from .util import (
     send_album_data,
     send_album_list,
     send_audio_track,
-    setup_download,
 )
 
 logger = logging.getLogger('khinsider_bot')
@@ -63,7 +63,7 @@ async def handle_track_url(message: Message, match: Match) -> None:
         await message.answer("Couldn't get track :-(")
         raise
 
-    with setup_download(_download_dirs) as download_dir:
+    with setup_download(ROOT_DOWNLOADS_PATH) as download_dir:
         await send_audio_track(message, track, download_dir)
 
 
@@ -102,7 +102,7 @@ async def handle_download_album_button(callback_query: CallbackQuery) -> None:
         message.react([ReactionTypeEmoji(emoji=Emoji.SEE_NO_EVIL)])
         raise
 
-    with setup_download(_download_dirs) as download_dir:
+    with setup_download(ROOT_DOWNLOADS_PATH) as download_dir:
         for track in fetch_tracks(*album.track_urls):
             await send_audio_track(message, track, download_dir)
 
@@ -304,5 +304,4 @@ async def handle_dummy_data(callback_query: CallbackQuery) -> None:
 
 
 _pending_downloads = {}
-_download_dirs = {}
 _cached_lists = {}
