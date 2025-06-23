@@ -4,13 +4,13 @@ from argparse import ArgumentParser
 from asyncio import run
 from os import getenv
 
-from khinsider.cache import get_manager
+from khinsider.cache import get_cache_manager
 
 from khinsider_bot.asgi import webserver
 from khinsider_bot.bot import bot, dispatcher
 from khinsider_bot.constants import BOT_DATA_PATH
 
-cache_manager = get_manager('khinsider')
+cache_manager = get_cache_manager('khinsider')
 
 
 def construct_argparser() -> ArgumentParser:

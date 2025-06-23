@@ -21,7 +21,7 @@ from khinsider import (
     parse_khinsider_url,
     search_albums,
 )
-from khinsider.cache import get_manager
+from khinsider.cache import get_cache_manager
 from khinsider.enums import AlbumTypes
 from khinsider.files import setup_download
 from magic_filter import RegexpMode
@@ -86,7 +86,7 @@ async def handle_download_album_button(callback_query: CallbackQuery) -> None:
 
     *_, md5_hash = callback_query.data.partition('://')
 
-    cache_manager = get_manager('khinsider')
+    cache_manager = get_cache_manager('khinsider')
     try:
         album_slug = cache_manager.get_cached_object(md5_hash)
     except KeyError:
@@ -200,7 +200,7 @@ async def handle_search_command(message: Message) -> None:
         await message.answer('I found nothing :(')
         return
 
-    cache_manager = get_manager('khinsider')
+    cache_manager = get_cache_manager('khinsider')
     list_md5 = cache_manager.cache_object(search_results)
 
     await send_album_list(
@@ -229,7 +229,7 @@ async def handle_publisher_command(message: Message) -> None:
         )
         return
 
-    cache_manager = get_manager('khinsider')
+    cache_manager = get_cache_manager('khinsider')
     hash_ = cache_manager.cache_object(search_results)
 
     await send_album_list(
@@ -248,7 +248,7 @@ async def handle_switch_page(callback_query: CallbackQuery) -> None:
     list_md5, page_n = callback_query.data.removeprefix('page://').split(';')
     page_n = int(page_n)
 
-    cache_manager = get_manager('khinsider')
+    cache_manager = get_cache_manager('khinsider')
     if not (album_list := cache_manager.get_cached_object(list_md5)):
         await callback_query.answer(
             'Search results invalid! Please, re-send search query.'
@@ -284,7 +284,7 @@ async def handle_select_album(callback_query: CallbackQuery) -> None:
     ).split(';')
     album_n = int(album_n)
 
-    cache_manager = get_manager('khinsider')
+    cache_manager = get_cache_manager('khinsider')
     if not (album_list := cache_manager.get_cached_object(list_md5)):
         await callback_query.answer(
             'Search results invalid! Please, re-send search query.'
