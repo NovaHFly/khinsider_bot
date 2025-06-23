@@ -1,6 +1,5 @@
 from collections.abc import Collection
 from contextlib import suppress
-from hashlib import md5
 from pathlib import Path
 from time import sleep
 
@@ -21,6 +20,7 @@ from khinsider import (
     download_track_file,
     get_album,
 )
+from khinsider.cache import get_manager
 
 from .constants import LIST_PAGE_LENGTH
 
@@ -59,7 +59,6 @@ def format_search_results(
 async def send_album_data(
     message: Message,
     album_slug: str,
-    pending_downloads: dict,
 ) -> None:
     try:
         album = get_album(album_slug)
@@ -67,9 +66,8 @@ async def send_album_data(
         await message.answer("Couldn't get album data :-(")
         raise
 
-    md5_hash = md5(album.slug.encode()).hexdigest()
-
-    pending_downloads[md5_hash] = album.slug
+    cache_manager = get_manager('khinsider')
+    md5_hash = cache_manager.cache_object(album_slug)
 
     if album.thumbnail_urls:
         await message.reply_photo(URLInputFile(album.thumbnail_urls[0]))
@@ -105,16 +103,6 @@ async def send_audio_track(
         )
     except Exception as e:
         await message.answer(f'Error for track {track.mp3_url}: {e}')
-
-
-def cache_album_list(
-    album_list: list[AlbumShort],
-    cached_lists: dict[str, list],
-) -> str:
-    list_md5 = md5(str(album_list).encode()).hexdigest()
-    cached_lists[list_md5] = album_list
-
-    return list_md5
 
 
 async def send_album_list(

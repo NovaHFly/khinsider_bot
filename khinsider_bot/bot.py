@@ -21,6 +21,7 @@ from khinsider import (
     parse_khinsider_url,
     search_albums,
 )
+from khinsider.cache import get_manager
 from khinsider.enums import AlbumTypes
 from khinsider.files import setup_download
 from magic_filter import RegexpMode
@@ -33,7 +34,6 @@ from .decorators import (
 )
 from .enums import Emoji
 from .util import (
-    cache_album_list,
     format_search_results,
     get_list_select_keyboard,
     send_album_data,
@@ -75,7 +75,6 @@ async def handle_album_url(message: Message, match: Match) -> None:
     await send_album_data(
         message,
         album_slug,
-        _pending_downloads,
     )
 
 
@@ -87,8 +86,9 @@ async def handle_download_album_button(callback_query: CallbackQuery) -> None:
 
     *_, md5_hash = callback_query.data.partition('://')
 
+    cache_manager = get_manager('khinsider')
     try:
-        album_slug = _pending_downloads.pop(md5_hash)
+        album_slug = cache_manager.get_cached_object(md5_hash)
     except KeyError:
         await callback_query.answer('Download not available. Resend album url')
         return
@@ -200,7 +200,8 @@ async def handle_search_command(message: Message) -> None:
         await message.answer('I found nothing :(')
         return
 
-    list_md5 = cache_album_list(search_results, _cached_lists)
+    cache_manager = get_manager('khinsider')
+    list_md5 = cache_manager.cache_object(search_results)
 
     await send_album_list(
         message,
@@ -228,12 +229,13 @@ async def handle_publisher_command(message: Message) -> None:
         )
         return
 
-    list_md5 = cache_album_list(search_results, _cached_lists)
+    cache_manager = get_manager('khinsider')
+    hash_ = cache_manager.cache_object(search_results)
 
     await send_album_list(
         message,
         search_results[0:LIST_PAGE_LENGTH],
-        list_md5,
+        hash_,
         current_page_num=0,
         last_page_num=len(search_results) // LIST_PAGE_LENGTH,
     )
@@ -246,7 +248,8 @@ async def handle_switch_page(callback_query: CallbackQuery) -> None:
     list_md5, page_n = callback_query.data.removeprefix('page://').split(';')
     page_n = int(page_n)
 
-    if not (album_list := _cached_lists.get(list_md5)):
+    cache_manager = get_manager('khinsider')
+    if not (album_list := cache_manager.get_cached_object(list_md5)):
         await callback_query.answer(
             'Search results invalid! Please, re-send search query.'
         )
@@ -281,7 +284,8 @@ async def handle_select_album(callback_query: CallbackQuery) -> None:
     ).split(';')
     album_n = int(album_n)
 
-    if not (album_list := _cached_lists.get(list_md5)):
+    cache_manager = get_manager('khinsider')
+    if not (album_list := cache_manager.get_cached_object(list_md5)):
         await callback_query.answer(
             'Search results invalid! Please, re-send search query.'
         )
@@ -294,14 +298,9 @@ async def handle_select_album(callback_query: CallbackQuery) -> None:
     await send_album_data(
         message,
         album_slug,
-        _pending_downloads,
     )
 
 
 @dispatcher.callback_query(F.data == ('dummy'))
 async def handle_dummy_data(callback_query: CallbackQuery) -> None:
     await callback_query.answer()
-
-
-_pending_downloads = {}
-_cached_lists = {}
