@@ -4,9 +4,13 @@ from argparse import ArgumentParser
 from asyncio import run
 from os import getenv
 
+from khinsider.cache import get_manager
+
 from khinsider_bot.asgi import webserver
 from khinsider_bot.bot import bot, dispatcher
 from khinsider_bot.constants import BOT_DATA_PATH
+
+cache_manager = get_manager('khinsider')
 
 
 def construct_argparser() -> ArgumentParser:
@@ -30,7 +34,6 @@ async def main() -> None:
             logging.StreamHandler(sys.stdout),
         ],
     )
-
     if args.webhook:
         await bot.set_webhook(
             url=getenv('WEBHOOK_URL'),
@@ -41,6 +44,8 @@ async def main() -> None:
         await bot.delete_webhook(drop_pending_updates=True)
     elif args.polling:
         await dispatcher.start_polling(bot)
+
+    cache_manager.stop_garbage_collector()
 
 
 if __name__ == '__main__':
