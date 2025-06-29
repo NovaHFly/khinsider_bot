@@ -1,4 +1,3 @@
-from collections.abc import Collection
 from contextlib import suppress
 from pathlib import Path
 from time import sleep
@@ -25,8 +24,8 @@ from khinsider.cache import CacheManager
 from .constants import LIST_PAGE_LENGTH
 
 
-def batch_collection(
-    collection: Collection,
+def batch_list(
+    collection: list,
     batch_size: int = 5,
 ) -> list[list]:
     return [
@@ -143,7 +142,7 @@ def get_list_select_keyboard(
     page_len: int = LIST_PAGE_LENGTH,
 ):
     page_shift = LIST_PAGE_LENGTH * current_page_num
-    select_keys = batch_collection(
+    select_keys = batch_list(
         [
             InlineKeyboardButton(
                 text=f'{i + page_shift + 1}',
