@@ -20,7 +20,7 @@ from khinsider import (
     download_track_file,
     get_album,
 )
-from khinsider.cache import get_cache_manager
+from khinsider.cache import CacheManager
 
 from .constants import LIST_PAGE_LENGTH
 
@@ -66,7 +66,7 @@ async def send_album_data(
         await message.answer("Couldn't get album data :-(")
         raise
 
-    cache_manager = get_cache_manager('khinsider')
+    cache_manager = CacheManager.get_manager()
     md5_hash = cache_manager.cache_object(album_slug)
 
     if album.thumbnail_urls:
