@@ -2,12 +2,12 @@ import logging
 import sys
 from argparse import ArgumentParser
 from asyncio import run
-from os import getenv
 
 from khinsider.cache import CacheManager
 
 from khinsider_bot.asgi import webserver
 from khinsider_bot.bot import bot, dispatcher
+from khinsider_bot.config import TELEGRAM_SECRET_TOKEN, TELEGRAM_WEBHOOK_URL
 from khinsider_bot.constants import BOT_DATA_PATH
 
 cache_manager = CacheManager.get_manager()
@@ -39,8 +39,8 @@ async def main() -> None:
     try:
         if args.webhook:
             await bot.set_webhook(
-                url=getenv('WEBHOOK_URL'),
-                secret_token=getenv('WEBHOOK_TOKEN'),
+                url=TELEGRAM_WEBHOOK_URL,
+                secret_token=TELEGRAM_SECRET_TOKEN,
             )
 
             await webserver.serve()

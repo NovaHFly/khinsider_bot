@@ -1,5 +1,4 @@
 from concurrent.futures import ThreadPoolExecutor
-from os import getenv
 
 from starlette.applications import Starlette
 from starlette.background import BackgroundTask
@@ -9,6 +8,7 @@ from starlette.routing import Route
 from uvicorn import Config, Server
 
 from .bot import bot, dispatcher
+from .config import WEBSERVER_HOST, WEBSERVER_PORT
 
 executor = ThreadPoolExecutor(max_workers=5)
 
@@ -37,7 +37,7 @@ starlette_app = Starlette(
 webserver = Server(
     config=Config(
         app=starlette_app,
-        port=getenv('PORT'),
-        host=getenv('HOSTNAME'),
+        port=WEBSERVER_PORT,
+        host=WEBSERVER_HOST,
     )
 )

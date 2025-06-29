@@ -1,6 +1,5 @@
 import logging
 from collections.abc import Iterator
-from os import getenv
 from re import Match
 
 from aiogram import Bot, Dispatcher, F
@@ -26,6 +25,7 @@ from khinsider.enums import AlbumTypes
 from khinsider.files import setup_download
 from magic_filter import RegexpMode
 
+from .config import TELEGRAM_TOKEN
 from .constants import LIST_PAGE_LENGTH, ROOT_DOWNLOADS_PATH
 from .decorators import (
     react_after,
@@ -44,7 +44,7 @@ from .util import (
 logger = logging.getLogger('khinsider_bot')
 
 bot = Bot(
-    token=getenv('TELEGRAM_TOKEN'),
+    token=TELEGRAM_TOKEN,
     default=DefaultBotProperties(parse_mode=ParseMode.HTML),
 )
 
