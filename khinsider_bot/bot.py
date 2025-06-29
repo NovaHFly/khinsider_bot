@@ -82,14 +82,23 @@ async def handle_album_url(message: Message, match: Match) -> None:
 async def handle_download_album_button(callback_query: CallbackQuery) -> None:
     message = callback_query.message
 
+    # TODO: Maybe move checking to separate function
+    if not isinstance(message, Message):
+        callback_query.answer('Unknown error!')
+        logger.error(f'Expected message, got {message}')
+        return
+
     await message.edit_reply_markup(reply_markup=None)
+
+    if not callback_query.data:
+        callback_query.answer('Unknown error!')
+        logger.error('Got empty callback_query.data')
+        return
 
     *_, md5_hash = callback_query.data.partition('://')
 
     cache_manager = CacheManager.get_manager()
-    try:
-        album_slug = cache_manager.get_cached_object(md5_hash)
-    except KeyError:
+    if not (album_slug := cache_manager.get_cached_object(md5_hash)):
         await callback_query.answer('Download not available. Resend album url')
         return
 
@@ -173,6 +182,10 @@ async def handle_help_command(message: Message) -> None:
 
 @dispatcher.message(Command('search'))
 async def handle_search_command(message: Message) -> None:
+    if not message.text:
+        logger.error('Empty message text!')
+        message.answer('Unknown error!')
+        return
     query = message.text.removeprefix('/search').strip()
 
     if not query:
@@ -214,6 +227,11 @@ async def handle_search_command(message: Message) -> None:
 
 @dispatcher.message(Command('publisher'))
 async def handle_publisher_command(message: Message) -> None:
+    if not message.text:
+        logger.error('Empty message text!')
+        message.answer('Unknown error!')
+        return
+
     query = message.text.removeprefix('/publisher').strip()
 
     if not query:
@@ -244,6 +262,16 @@ async def handle_publisher_command(message: Message) -> None:
 @dispatcher.callback_query(F.data.startswith('page://'))
 async def handle_switch_page(callback_query: CallbackQuery) -> None:
     message = callback_query.message
+
+    if not isinstance(message, Message):
+        logger.error(f'Expected message, got {message}')
+        callback_query.answer('Unknown error!')
+        return
+
+    if not callback_query.data:
+        logger.error('Got empty callback_query.data')
+        callback_query.answer('Unknown error!')
+        return
 
     list_md5, page_n = callback_query.data.removeprefix('page://').split(';')
     page_n = int(page_n)
@@ -278,6 +306,16 @@ async def handle_switch_page(callback_query: CallbackQuery) -> None:
 @dispatcher.callback_query(F.data.startswith('select://'))
 async def handle_select_album(callback_query: CallbackQuery) -> None:
     message = callback_query.message
+
+    if not isinstance(message, Message):
+        logger.error(f'Expected message, got {message}')
+        callback_query.answer('Unknown error!')
+        return
+
+    if not callback_query.data:
+        logger.error('Got empty callback_query.data')
+        callback_query.answer('Unknown error!')
+        return
 
     list_md5, album_n = callback_query.data.removeprefix(
         'select://',
